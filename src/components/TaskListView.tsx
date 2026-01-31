@@ -73,9 +73,10 @@ export default function TaskListView({
                   {task.title}
                 </Text>
                 <Text style={styles.taskTime}>
-                  {task.startTime} – {task.endTime} • {duration} • {task.category}
+                  {task.startTime} – {task.endTime} • {task.category}
                 </Text>
               </View>
+              <Text style={styles.taskDuration}>{duration}</Text>
               <TouchableOpacity
                 style={styles.taskDeleteButton}
                 onPress={() => onDeleteTask(task.id)}>
@@ -91,14 +92,14 @@ export default function TaskListView({
 
 const styles = StyleSheet.create({
   container: {
-    width: '90%',
+    width: '100%',
     marginBottom: SPACING.lg,
     backgroundColor: COLORS.cardBackground,
     borderRadius: SIZES.borderRadius,
     overflow: 'hidden',
   },
   emptyContainer: {
-    width: '90%',
+    width: '100%',
     paddingVertical: SPACING.xl,
     backgroundColor: COLORS.cardBackground,
     borderRadius: SIZES.borderRadius,
@@ -147,6 +148,13 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs,
     color: COLORS.textTertiary,
     marginTop: SPACING.sm,
+  },
+  taskDuration: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textTertiary,
+    marginLeft: SPACING.md,
+    textAlign: 'right',
+    minWidth: 56,
   },
   taskDeleteButton: {
     padding: SPACING.md,

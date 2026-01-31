@@ -11,7 +11,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export const CLOCK_RADIUS = SCREEN_WIDTH * 0.35;
 
 /** Смещение циферблата вниз для балансировки с заголовком */
-export const CLOCK_CENTER_OFFSET = 50;
+export const CLOCK_CENTER_OFFSET = 0;
 
 /** Центр X координата циферблата */
 export const CENTER_X = SCREEN_WIDTH / 2;

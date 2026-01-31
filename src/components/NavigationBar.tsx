@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cardBackground,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    marginTop: SPACING.md,
+    marginTop: -8,
   },
   navButton: {
     width: 44,
