@@ -22,6 +22,7 @@ import {
   isValidTimeRange,
   parseDateISO,
 } from '../utils/timeUtils';
+import { DAYS_OF_WEEK } from '../constants/theme';
 
 export function useTaskManager() {
   // ============================================================================
@@ -100,6 +101,13 @@ export function useTaskManager() {
     return Math.min((totalHours / 24) * 100, 100);
   })();
 
+  useEffect(() => {
+    console.log('[useTaskManager] currentDayId:', currentDay?.id);
+    console.log('[useTaskManager] currentDay.date:', currentDay?.date);
+    console.log('[useTaskManager] today:', formatDateISO(new Date()));
+    console.log('[useTaskManager] isCurrentDay:', isCurrentDay);
+  }, [currentDay?.id, currentDay?.date, isCurrentDay]);
+
   const getStartOfWeek = (date: Date): Date => {
     const result = new Date(date);
     const day = result.getDay();
@@ -113,29 +121,12 @@ export function useTaskManager() {
     const weekStart = getStartOfWeek(new Date());
 
     return inputDays.map((day, index) => {
-      const rawDate = (day as any).date;
-      if (typeof rawDate === 'string') {
-        const parsed = parseDateISO(rawDate);
-        if (parsed) {
-          return day;
-        }
-      }
-
-      if (typeof rawDate === 'number') {
-        const rawMonth =
-          typeof (day as any).month === 'number'
-            ? (day as any).month
-            : new Date().getMonth() + 1;
-        const dateObj = new Date(new Date().getFullYear(), rawMonth - 1, rawDate);
-        return {
-          ...day,
-          date: formatDateISO(dateObj),
-        };
-      }
-
+      const dayIndex = DAYS_OF_WEEK.indexOf(day.id as typeof DAYS_OF_WEEK[number]);
+      const resolvedIndex = dayIndex >= 0 ? dayIndex : index;
+      const expectedDate = formatDateISO(addDays(weekStart, resolvedIndex));
       return {
         ...day,
-        date: formatDateISO(addDays(weekStart, index)),
+        date: expectedDate,
       };
     });
   };
@@ -245,6 +236,42 @@ export function useTaskManager() {
       }
     },
     [applyImportedTasksToDay],
+  );
+
+  // ============================================================================
+  // СИНХРОНИЗАЦИЯ С КАЛЕНДАРЕМ
+  // ============================================================================
+
+  const syncTaskToCalendar = useCallback(
+    async (task: Task): Promise<string | null> => {
+      try {
+        const eventId = await addTaskToCalendar(task, selectedDate);
+        if (eventId) {
+          console.log('[useTaskManager] Task synced to calendar:', eventId);
+        }
+        return eventId;
+      } catch (error) {
+        console.warn('[useTaskManager] Error syncing task to calendar:', error);
+        return null;
+      }
+    },
+    [selectedDate],
+  );
+
+  const deleteTaskFromCalendar = useCallback(
+    async (task: Task) => {
+      try {
+        if (!task.calendarEventId) return;
+
+        const removed = await removeTaskFromCalendar(task.calendarEventId);
+        if (removed) {
+          console.log('[useTaskManager] Task deleted from calendar:', task.calendarEventId);
+        }
+      } catch (error) {
+        console.warn('[useTaskManager] Error deleting task from calendar:', error);
+      }
+    },
+    [],
   );
 
   // ============================================================================
@@ -405,42 +432,6 @@ export function useTaskManager() {
       }
     },
     [days, currentDay],
-  );
-
-  // ============================================================================
-  // СИНХРОНИЗАЦИЯ С КАЛЕНДАРЕМ
-  // ============================================================================
-
-  const syncTaskToCalendar = useCallback(
-    async (task: Task): Promise<string | null> => {
-      try {
-        const eventId = await addTaskToCalendar(task, selectedDate);
-        if (eventId) {
-          console.log('[useTaskManager] Task synced to calendar:', eventId);
-        }
-        return eventId;
-      } catch (error) {
-        console.warn('[useTaskManager] Error syncing task to calendar:', error);
-        return null;
-      }
-    },
-    [],
-  );
-
-  const deleteTaskFromCalendar = useCallback(
-    async (task: Task) => {
-      try {
-        if (!task.calendarEventId) return;
-
-        const removed = await removeTaskFromCalendar(task.calendarEventId);
-        if (removed) {
-          console.log('[useTaskManager] Task deleted from calendar:', task.calendarEventId);
-        }
-      } catch (error) {
-        console.warn('[useTaskManager] Error deleting task from calendar:', error);
-      }
-    },
-    [selectedDate],
   );
 
   const syncSelectedDayFromCalendar = useCallback(
