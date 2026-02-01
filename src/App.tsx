@@ -1,7 +1,17 @@
 import 'react-native-get-random-values';
 
-import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, View, SafeAreaView, TouchableOpacity, Text, FlatList } from 'react-native';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import {
+  StyleSheet,
+  View,
+  SafeAreaView,
+  TouchableOpacity,
+  Text,
+  FlatList,
+  PanResponder,
+  Keyboard,
+  TouchableWithoutFeedback,
+} from 'react-native';
 
 import { useTaskManager } from './hooks/useTaskManager';
 import { COLORS, SPACING, FONT_SIZES } from './constants/theme';
@@ -180,6 +190,34 @@ export default function App() {
     }
   }, [days, selectedDayId, setSelectedDayId]);
 
+  const prevDayRef = useRef(handlePrevDay);
+  const nextDayRef = useRef(handleNextDay);
+
+  useEffect(() => {
+    prevDayRef.current = handlePrevDay;
+    nextDayRef.current = handleNextDay;
+  }, [handlePrevDay, handleNextDay]);
+
+  const swipeResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) => {
+        const { dx, dy } = gesture;
+        return Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy) * 1.5;
+      },
+      onPanResponderRelease: (_, gesture) => {
+        const { dx, vx } = gesture;
+        const shouldTrigger = Math.abs(dx) > 60 || Math.abs(vx) > 0.5;
+        if (!shouldTrigger) return;
+
+        if (dx > 0) {
+          prevDayRef.current();
+        } else {
+          nextDayRef.current();
+        }
+      },
+    }),
+  ).current;
+
   const canGoPrev = useMemo(() => {
     const currentIndex = days.findIndex((d) => d.id === selectedDayId);
     return currentIndex > 0;
@@ -199,7 +237,7 @@ export default function App() {
       {
         id: 'screen',
         component: (
-          <View>
+          <View {...swipeResponder.panHandlers}>
             {/* ОШИБКИ ХРАНИЛИЩА */}
             {storageError && (
               <StorageErrorBanner message={storageError} onDismiss={clearStorageError} />
@@ -215,7 +253,6 @@ export default function App() {
               currentDay={currentDay}
               isCurrentDay={isCurrentDay}
               tasks={tasks}
-              totalHours={totalHours}
               onTaskPress={handleEditTask}
             />
 
@@ -289,15 +326,18 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* FlatList ВМЕСТО ScrollView — ДЛЯ СОВМЕСТИМОСТИ С ВЛОЖЕННЫМИ FlatList */}
-      <FlatList
-        data={screenData}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => item.component}
-        scrollEnabled={true}
-        showsVerticalScrollIndicator={false}
-        style={styles.container}
-      />
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        {/* FlatList ВМЕСТО ScrollView — ДЛЯ СОВМЕСТИМОСТИ С ВЛОЖЕННЫМИ FlatList */}
+        <FlatList
+          data={screenData}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => item.component}
+          scrollEnabled={true}
+          showsVerticalScrollIndicator={false}
+          style={styles.container}
+          keyboardShouldPersistTaps="handled"
+        />
+      </TouchableWithoutFeedback>
 
       {/* МОДАЛЬНОЕ ОКНО ДЛЯ ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ ЗАДАЧИ */}
       <SwipeableTaskModal

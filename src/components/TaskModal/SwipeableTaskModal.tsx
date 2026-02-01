@@ -9,6 +9,8 @@ import {
   Animated,
   PanResponder,
   Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FormData, Day } from '../../types/types';
@@ -147,7 +149,8 @@ export default function SwipeableTaskModal({
           <View style={styles.swipeIndicator} />
 
           {/* СОДЕРЖИМОЕ */}
-          <View style={styles.content}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <View style={styles.content}>
             {/* ЗАГОЛОВОК */}
             <View style={styles.header}>
               <Text style={styles.title}>{isEditing ? 'Редактировать' : 'Добавить задачу'}</Text>
@@ -234,7 +237,8 @@ export default function SwipeableTaskModal({
                 <Text style={styles.saveText}>{isEditing ? 'Сохранить' : 'Добавить'}</Text>
               </TouchableOpacity>
             </View>
-          </View>
+            </View>
+          </TouchableWithoutFeedback>
         </Animated.View>
       </View>
 

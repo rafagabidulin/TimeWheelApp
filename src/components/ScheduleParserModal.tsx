@@ -10,6 +10,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { parseSchedule, validateParsedTask, ParsedTask } from '../utils/scheduleParser';
 import { COLORS, SPACING, FONT_SIZES, SIZES } from '../constants/theme';
@@ -112,7 +114,8 @@ export default function ScheduleParserModal({
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={handleClose} />
 
-        <View style={styles.container}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.container}>
           {!showPreview ? (
             <>
               {/* ВВОД РАСПИСАНИЯ */}
@@ -163,7 +166,7 @@ export default function ScheduleParserModal({
                 <Text style={styles.subtitle}>Найдено {parsedTasks.length} задач</Text>
               </View>
 
-              <ScrollView style={styles.preview}>
+              <ScrollView style={styles.preview} keyboardShouldPersistTaps="handled">
                 {parsedTasks.map((task, index) => (
                   <View key={index} style={styles.taskPreview}>
                     <View style={[styles.taskColorDot, { backgroundColor: task.color }]} />
@@ -201,7 +204,8 @@ export default function ScheduleParserModal({
               </View>
             </>
           )}
-        </View>
+          </View>
+        </TouchableWithoutFeedback>
       </View>
     </Modal>
   );

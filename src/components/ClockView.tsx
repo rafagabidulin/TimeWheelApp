@@ -21,7 +21,6 @@ interface ClockViewProps {
   currentDay: Day;
   isCurrentDay: boolean;
   tasks: Task[];
-  totalHours: number;
   onTaskPress: (taskId: string) => void;
 }
 
@@ -39,11 +38,17 @@ export default function ClockView({
   currentDay,
   isCurrentDay,
   tasks,
-  totalHours,
   onTaskPress,
 }: ClockViewProps) {
+  const currentHours = useMemo(() => {
+    const hours = currentTime.getHours();
+    const minutes = currentTime.getMinutes();
+    const seconds = currentTime.getSeconds();
+    return hours + minutes / 60 + seconds / 3600;
+  }, [currentTime]);
+
   // Вычисляем угол стрелки только при изменении времени
-  const currentAngle = isCurrentDay ? getAngle(totalHours) : 0;
+  const currentAngle = isCurrentDay ? getAngle(currentHours) : 0;
   const angleRad = (currentAngle - 90) * (Math.PI / 180);
 
   // Кэшируем координаты текста для каждой задачи
@@ -130,9 +135,9 @@ export default function ClockView({
                   const start = timeToHours(t.startTime);
                   const end = timeToHours(t.endTime);
                   if (start > end) {
-                    return totalHours >= start || totalHours < end;
+                    return currentHours >= start || currentHours < end;
                   }
-                  return totalHours >= start && totalHours < end;
+                  return currentHours >= start && currentHours < end;
                 })?.id;
 
             const coords = taskTextCoordinates[index];
