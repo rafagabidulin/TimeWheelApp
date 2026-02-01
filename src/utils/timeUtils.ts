@@ -64,6 +64,16 @@ export function formatTime(hours: number, minutes: number): string {
 }
 
 /**
+ * Преобразует минуты от начала суток в строку "HH:MM"
+ */
+export function minutesToTime(totalMinutes: number): string {
+  const normalized = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  return formatTime(hours, minutes);
+}
+
+/**
  * Форматирует дату в локальный ISO-формат YYYY-MM-DD
  */
 export function formatDateISO(date: Date): string {

@@ -2,7 +2,7 @@
 import * as Calendar from 'expo-calendar';
 import { Day, Task } from '../types/types';
 import { v4 as uuidv4 } from 'uuid';
-import { parseDateISO } from './timeUtils';
+import { formatDateISO, parseDateISO } from './timeUtils';
 
 /**
  * Двусторонняя синхронизация между TimeWheel и календарем iPhone
@@ -102,7 +102,7 @@ export async function importCalendarEventsToDay(calendarId: string, date: Date):
           endTime,
           category,
           color,
-          dayId: '', // Будет установлено родителем
+          date: formatDateISO(date),
           calendarEventId: event.id, // Сохраняем ID события в календаре
         };
 
@@ -221,7 +221,7 @@ export async function syncCalendarToDays(days: Day[], calendarId: string): Promi
           endTime,
           category: getCategoryFromEventTitle(event.title || ''),
           color: getColorFromEvent(event),
-          dayId: day.id,
+          date: day.date,
           calendarEventId: event.id,
         };
 

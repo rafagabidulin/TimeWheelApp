@@ -73,9 +73,10 @@ export default function ClockView({
     });
   }, [tasks]);
 
-  const formattedTime = isCurrentDay
-    ? currentTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-    : '--:--';
+  const formattedTime = currentTime.toLocaleTimeString('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   const dateStr = `${currentDay.name} ${String(selectedDate.getDate()).padStart(2, '0')}`;
 

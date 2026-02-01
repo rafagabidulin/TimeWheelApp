@@ -20,8 +20,8 @@ import { COLOR_OPTIONS, CATEGORY_OPTIONS } from '../../constants/theme';
 interface SwipeableTaskModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: () => Promise<void>;
-  onUpdate: () => Promise<void>;
+  onAdd: (options?: { allowOverlap?: boolean }) => Promise<void>;
+  onUpdate: (options?: { allowOverlap?: boolean }) => Promise<void>;
   editingTaskId: string | null;
   currentDay: Day;
   formData: FormData;
@@ -109,8 +109,37 @@ export default function SwipeableTaskModal({
         await onAdd();
       }
     } catch (error) {
-      console.error('[Modal] Error:', error);
       const message = error instanceof Error && error.message ? error.message : 'Не удалось сохранить задачу';
+
+      if (message.includes('пересекается')) {
+        Alert.alert(
+          'Конфликт задач',
+          'Задача пересекается с уже существующей. Добавить и скорректировать старую задачу?',
+          [
+            { text: 'Отмена', style: 'cancel' },
+            {
+              text: 'Добавить',
+              onPress: async () => {
+                try {
+                  if (isEditing) {
+                    await onUpdate({ allowOverlap: true });
+                  } else {
+                    await onAdd({ allowOverlap: true });
+                  }
+                } catch (innerError) {
+                  const innerMessage =
+                    innerError instanceof Error && innerError.message
+                      ? innerError.message
+                      : 'Не удалось сохранить задачу';
+                  Alert.alert('Ошибка', innerMessage);
+                }
+              },
+            },
+          ],
+        );
+        return;
+      }
+
       Alert.alert('Ошибка', message);
     }
   };

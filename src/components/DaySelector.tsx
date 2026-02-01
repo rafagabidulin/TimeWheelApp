@@ -6,24 +6,24 @@ import { COLORS, SPACING, FONT_SIZES, SIZES } from '../constants/theme';
 
 interface DaySelectorProps {
   days: Day[];
-  selectedDayId: string;
-  onSelectDay: (dayId: string) => void;
+  selectedDate: string;
+  onSelectDate: (date: string) => void;
 }
 
 /**
  * Компонент выбора дня недели
  * Отображает полоску дней с возможностью выбора
  */
-export default function DaySelector({ days, selectedDayId, onSelectDay }: DaySelectorProps) {
+export default function DaySelector({ days, selectedDate, onSelectDate }: DaySelectorProps) {
   return (
     <View style={styles.container}>
       {days.map((day) => (
         <TouchableOpacity
           key={day.id}
-          style={[styles.dayChip, selectedDayId === day.id && styles.selectedDayChip]}
-          onPress={() => onSelectDay(day.id)}
+          style={[styles.dayChip, selectedDate === day.date && styles.selectedDayChip]}
+          onPress={() => onSelectDate(day.date)}
           activeOpacity={0.7}>
-          <Text style={[styles.dayText, selectedDayId === day.id && styles.selectedDayText]}>
+          <Text style={[styles.dayText, selectedDate === day.date && styles.selectedDayText]}>
             {day.name}
           </Text>
         </TouchableOpacity>

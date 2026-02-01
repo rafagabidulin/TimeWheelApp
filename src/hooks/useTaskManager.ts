@@ -1,14 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Day, Task, FormData } from '../types/types';
 import { mockDays } from '../utils/mockData';
 import { loadDaysFromStorage, saveDaysToStorage, StorageError } from '../utils/storageUtils';
-import {
-  addTaskToCalendar,
-  removeTaskFromCalendar,
-  updateTaskInCalendar,
-  initializeCalendarSync,
-} from '../utils/calendarSync';
+import { initializeCalendarSync } from '../utils/calendarSync';
 import {
   checkForNewCalendarEvents,
   importCalendarEventsToDay,
@@ -18,11 +12,13 @@ import {
   addDays,
   doTimeRangesOverlap,
   formatDateISO,
-  getCurrentDayId,
   isValidTimeRange,
+  minutesToTime,
   parseDateISO,
+  timeToMinutes,
 } from '../utils/timeUtils';
-import { DAYS_OF_WEEK } from '../constants/theme';
+import { DAYS_DATA, DAYS_OF_WEEK } from '../constants/theme';
+import { WEEKLY_TEMPLATE, buildTasksForDate } from '../utils/templates';
 
 export function useTaskManager() {
   // ============================================================================
@@ -30,7 +26,7 @@ export function useTaskManager() {
   // ============================================================================
 
   const [days, setDays] = useState<Day[]>(mockDays);
-  const [selectedDayId, setSelectedDayId] = useState<string>(getCurrentDayId());
+  const [selectedDate, setSelectedDate] = useState<string>(formatDateISO(new Date()));
   const [currentTime, setCurrentTime] = useState(new Date());
   const [appState, setAppState] = useState('active');
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -48,10 +44,52 @@ export function useTaskManager() {
   // ВЫЧИСЛЯЕМЫЕ ЗНАЧЕНИЯ
   // ============================================================================
 
-  const currentDay = days.find((d) => d.id === selectedDayId) || days[0];
-  const isCurrentDay = currentDay?.date === formatDateISO(new Date());
+  const selectedDateObj = parseDateISO(selectedDate) || new Date();
 
-  const tasks = currentDay?.tasks || [];
+  const getStartOfWeek = (date: Date): Date => {
+    const result = new Date(date);
+    const day = result.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    result.setDate(result.getDate() + diff);
+    result.setHours(0, 0, 0, 0);
+    return result;
+  };
+
+  const getDayName = (date: Date): string => {
+    const day = date.getDay();
+    const index = day === 0 ? 6 : day - 1;
+    return DAYS_DATA[index]?.name || '';
+  };
+
+  const weekStart = getStartOfWeek(selectedDateObj);
+
+  const weekDays = days.length
+    ? DAYS_DATA.map((day, index) => {
+        const date = addDays(weekStart, index);
+        const dateIso = formatDateISO(date);
+        const existing = days.find((d) => d.date === dateIso);
+        return (
+          existing || {
+            id: dateIso,
+            name: day.name,
+            date: dateIso,
+            tasks: [],
+          }
+        );
+      })
+    : [];
+
+  const currentDay =
+    days.find((d) => d.date === selectedDate) || {
+      id: selectedDate,
+      name: getDayName(selectedDateObj),
+      date: selectedDate,
+      tasks: [],
+    };
+
+  const isCurrentDay = selectedDate === formatDateISO(new Date());
+
+  const tasks = currentDay.tasks || [];
 
   // Сортируем задачи по времени
   const sortedTasks = [...tasks].sort((a, b) => {
@@ -81,8 +119,7 @@ export function useTaskManager() {
     return taskStartTime > currentTimeValue;
   });
 
-  const selectedDate =
-    parseDateISO(currentDay?.date || '') || new Date();
+  const selectedDateForCalendar = selectedDateObj;
 
   const totalHours =
     currentDay?.tasks.reduce((sum, task) => {
@@ -98,35 +135,37 @@ export function useTaskManager() {
 
   const loadPercent = (() => {
     if (totalHours === 0) return 0;
-    return Math.min((totalHours / 24) * 100, 100);
+    return Math.round(Math.min((totalHours / 24) * 100, 100));
   })();
 
-  useEffect(() => {
-    console.log('[useTaskManager] currentDayId:', currentDay?.id);
-    console.log('[useTaskManager] currentDay.date:', currentDay?.date);
-    console.log('[useTaskManager] today:', formatDateISO(new Date()));
-    console.log('[useTaskManager] isCurrentDay:', isCurrentDay);
-  }, [currentDay?.id, currentDay?.date, isCurrentDay]);
-
-  const getStartOfWeek = (date: Date): Date => {
-    const result = new Date(date);
-    const day = result.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    result.setDate(result.getDate() + diff);
-    result.setHours(0, 0, 0, 0);
-    return result;
-  };
-
   const normalizeDays = (inputDays: Day[]): Day[] => {
-    const weekStart = getStartOfWeek(new Date());
+    const weekStartToday = getStartOfWeek(new Date());
 
     return inputDays.map((day, index) => {
-      const dayIndex = DAYS_OF_WEEK.indexOf(day.id as typeof DAYS_OF_WEEK[number]);
-      const resolvedIndex = dayIndex >= 0 ? dayIndex : index;
-      const expectedDate = formatDateISO(addDays(weekStart, resolvedIndex));
+      const dateFromDay = typeof day.date === 'string' ? parseDateISO(day.date) : null;
+      const dateFromId = typeof day.id === 'string' ? parseDateISO(day.id) : null;
+
+      let resolvedDate: Date | null = dateFromDay || dateFromId;
+
+      if (!resolvedDate) {
+        const weekdayIndex = DAYS_OF_WEEK.indexOf(day.id as typeof DAYS_OF_WEEK[number]);
+        const resolvedIndex = weekdayIndex >= 0 ? weekdayIndex : index;
+        resolvedDate = addDays(weekStartToday, resolvedIndex);
+      }
+
+      const dateIso = formatDateISO(resolvedDate);
+      const tasks = (day.tasks || []).map((task, taskIndex) => ({
+        ...task,
+        id: task.id || `task-${dateIso}-${taskIndex}`,
+        date: dateIso,
+      }));
+
       return {
         ...day,
-        date: expectedDate,
+        id: dateIso,
+        name: day.name || getDayName(resolvedDate),
+        date: dateIso,
+        tasks,
       };
     });
   };
@@ -154,6 +193,7 @@ export function useTaskManager() {
             await saveDaysToStorage(syncedDays);
             setDays(syncedDays);
             console.log('[useTaskManager] Calendar events synced to days');
+            calendarInitializedRef.current = true;
             return;
           } catch (syncError) {
             console.warn('[useTaskManager] Calendar sync error:', syncError);
@@ -183,24 +223,49 @@ export function useTaskManager() {
   const applyImportedTasksToDay = useCallback((day: Day, importedTasks: Task[]): Day => {
     const normalized = importedTasks.map((task) => ({
       ...task,
-      dayId: day.id,
+      date: day.date,
     }));
+
+    let hasUpdates = false;
+    const updatedTasks = day.tasks.map((existing) => {
+      if (!existing.calendarEventId) {
+        return existing;
+      }
+
+      const imported = normalized.find(
+        (task) => task.calendarEventId && task.calendarEventId === existing.calendarEventId,
+      );
+      if (!imported) {
+        return existing;
+      }
+
+      hasUpdates = true;
+      return {
+        ...existing,
+        title: imported.title,
+        startTime: imported.startTime,
+        endTime: imported.endTime,
+        category: imported.category,
+        color: imported.color,
+        date: day.date,
+      };
+    });
 
     const newTasks = normalized.filter(
       (imported) =>
-        !day.tasks.some(
+        !updatedTasks.some(
           (existing) =>
             existing.calendarEventId === imported.calendarEventId || existing.id === imported.id,
         ),
     );
 
-    if (newTasks.length === 0) {
+    if (newTasks.length === 0 && !hasUpdates) {
       return day;
     }
 
     return {
       ...day,
-      tasks: [...day.tasks, ...newTasks],
+      tasks: [...updatedTasks, ...newTasks],
     };
   }, []);
 
@@ -242,44 +307,12 @@ export function useTaskManager() {
   // СИНХРОНИЗАЦИЯ С КАЛЕНДАРЕМ
   // ============================================================================
 
-  const syncTaskToCalendar = useCallback(
-    async (task: Task): Promise<string | null> => {
-      try {
-        const eventId = await addTaskToCalendar(task, selectedDate);
-        if (eventId) {
-          console.log('[useTaskManager] Task synced to calendar:', eventId);
-        }
-        return eventId;
-      } catch (error) {
-        console.warn('[useTaskManager] Error syncing task to calendar:', error);
-        return null;
-      }
-    },
-    [selectedDate],
-  );
-
-  const deleteTaskFromCalendar = useCallback(
-    async (task: Task) => {
-      try {
-        if (!task.calendarEventId) return;
-
-        const removed = await removeTaskFromCalendar(task.calendarEventId);
-        if (removed) {
-          console.log('[useTaskManager] Task deleted from calendar:', task.calendarEventId);
-        }
-      } catch (error) {
-        console.warn('[useTaskManager] Error deleting task from calendar:', error);
-      }
-    },
-    [],
-  );
-
   // ============================================================================
   // ФУНКЦИИ РАБОТЫ С ЗАДАЧАМИ
   // ============================================================================
 
   const validateTask = useCallback(
-    (formData: FormData, ignoreTaskId?: string) => {
+    (formData: FormData, ignoreTaskId?: string, allowOverlap?: boolean) => {
       if (!formData.title.trim()) {
         throw new Error('Введите название задачи');
       }
@@ -288,27 +321,29 @@ export function useTaskManager() {
         throw new Error('Введите корректное время');
       }
 
-      const hasOverlap = currentDay.tasks.some(
-        (task) =>
-          task.id !== ignoreTaskId &&
-          doTimeRangesOverlap(
-            formData.startTime,
-            formData.endTime,
-            task.startTime,
-            task.endTime,
-          ),
-      );
+      if (!allowOverlap) {
+        const hasOverlap = currentDay.tasks.some(
+          (task) =>
+            task.id !== ignoreTaskId &&
+            doTimeRangesOverlap(
+              formData.startTime,
+              formData.endTime,
+              task.startTime,
+              task.endTime,
+            ),
+        );
 
-      if (hasOverlap) {
-        throw new Error('Задача пересекается с уже существующей');
+        if (hasOverlap) {
+          throw new Error('Задача пересекается с уже существующей');
+        }
       }
     },
     [currentDay.tasks],
   );
 
   const addTask = useCallback(
-    async (formData: FormData) => {
-      validateTask(formData);
+    async (formData: FormData, options?: { allowOverlap?: boolean }) => {
+      validateTask(formData, undefined, options?.allowOverlap);
 
       const newTask: Task = {
         id: `task-${Date.now()}`,
@@ -317,46 +352,93 @@ export function useTaskManager() {
         endTime: formData.endTime,
         category: formData.category,
         color: formData.color,
-        dayId: currentDay.id,
+        date: selectedDate,
       };
 
-      const updatedDays = days.map((day) =>
-        day.id === currentDay.id ? { ...day, tasks: [...day.tasks, newTask] } : day,
-      );
+      let nextDays: Day[] = [];
+      setDays((prevDays) => {
+        const hasDay = prevDays.some((day) => day.date === selectedDate);
 
-      await saveDaysToStorage(updatedDays);
-      setDays(updatedDays);
+        nextDays = hasDay
+          ? prevDays.map((day) => {
+              if (day.date !== selectedDate) {
+                return day;
+              }
 
-      // Синхронизируем в календарь
-      const eventId = await syncTaskToCalendar(newTask);
-      if (eventId) {
-        setDays((prevDays) => {
-          const withEventId = prevDays.map((day) =>
-            day.id === currentDay.id
-              ? {
-                  ...day,
-                  tasks: day.tasks.map((task) =>
-                    task.id === newTask.id ? { ...task, calendarEventId: eventId } : task,
-                  ),
-                }
-              : day,
-          );
-          saveDaysToStorage(withEventId).catch((error) => {
-            console.error('[useTaskManager] Error saving calendar event ID:', error);
-          });
-          return withEventId;
-        });
-      }
+              if (!options?.allowOverlap) {
+                return { ...day, tasks: [...day.tasks, newTask] };
+              }
+
+              const newStart = timeToMinutes(newTask.startTime);
+              const newEndRaw = timeToMinutes(newTask.endTime);
+              const newEnd = newEndRaw <= newStart ? newEndRaw + 24 * 60 : newEndRaw;
+
+              const adjustedTasks = day.tasks
+                .map((task) => {
+                  const oldStart = timeToMinutes(task.startTime);
+                  const oldEndRaw = timeToMinutes(task.endTime);
+                  const oldEnd = oldEndRaw <= oldStart ? oldEndRaw + 24 * 60 : oldEndRaw;
+
+                  const hasOverlap = oldStart < newEnd && newStart < oldEnd;
+                  if (!hasOverlap) {
+                    return task;
+                  }
+
+                  if (oldStart < newStart) {
+                    const trimmedEnd = newStart;
+                    if (trimmedEnd <= oldStart) {
+                      return null;
+                    }
+                    return {
+                      ...task,
+                      endTime: minutesToTime(trimmedEnd),
+                    };
+                  }
+
+                  if (oldEnd > newEnd) {
+                    const trimmedStart = newEnd;
+                    if (oldEnd <= trimmedStart) {
+                      return null;
+                    }
+                    return {
+                      ...task,
+                      startTime: minutesToTime(trimmedStart),
+                    };
+                  }
+
+                  return null;
+                })
+                .filter(Boolean) as Task[];
+
+              return {
+                ...day,
+                tasks: [...adjustedTasks, newTask],
+              };
+            })
+          : [
+              ...prevDays,
+              {
+                id: selectedDate,
+                name: getDayName(selectedDateObj),
+                date: selectedDate,
+                tasks: [newTask],
+              },
+            ];
+
+        return nextDays;
+      });
+
+      await saveDaysToStorage(nextDays);
     },
-    [days, currentDay, syncTaskToCalendar, validateTask],
+    [getDayName, selectedDate, selectedDateObj, validateTask],
   );
 
   const updateTask = useCallback(
-    async (taskId: string, formData: FormData) => {
-      validateTask(formData, taskId);
+    async (taskId: string, formData: FormData, options?: { allowOverlap?: boolean }) => {
+      validateTask(formData, taskId, options?.allowOverlap);
 
       const updatedDays = days.map((day) => {
-        if (day.id !== currentDay.id) return day;
+        if (day.date !== selectedDate) return day;
 
         return {
           ...day,
@@ -377,44 +459,14 @@ export function useTaskManager() {
 
       await saveDaysToStorage(updatedDays);
       setDays(updatedDays);
-
-      const updatedTask = updatedDays
-        .find((day) => day.id === currentDay.id)
-        ?.tasks.find((task) => task.id === taskId);
-
-      if (updatedTask?.calendarEventId) {
-        await updateTaskInCalendar(updatedTask, selectedDate, updatedTask.calendarEventId);
-      } else if (updatedTask) {
-        const eventId = await syncTaskToCalendar(updatedTask);
-        if (eventId) {
-          setDays((prevDays) => {
-            const withEventId = prevDays.map((day) =>
-              day.id === currentDay.id
-                ? {
-                    ...day,
-                    tasks: day.tasks.map((task) =>
-                      task.id === updatedTask.id
-                        ? { ...task, calendarEventId: eventId }
-                        : task,
-                    ),
-                  }
-                : day,
-            );
-            saveDaysToStorage(withEventId).catch((error) => {
-              console.error('[useTaskManager] Error saving calendar event ID:', error);
-            });
-            return withEventId;
-          });
-        }
-      }
     },
-    [days, currentDay, selectedDate, syncTaskToCalendar, validateTask],
+    [days, selectedDate, validateTask],
   );
 
   const deleteTask = useCallback(
     async (taskId: string) => {
       const updatedDays = days.map((day) =>
-        day.id === currentDay.id
+        day.date === selectedDate
           ? {
               ...day,
               tasks: day.tasks.filter((t) => t.id !== taskId),
@@ -425,13 +477,8 @@ export function useTaskManager() {
       await saveDaysToStorage(updatedDays);
       setDays(updatedDays);
 
-      // Удаляем из календаря если это импортированное событие
-      const taskToDelete = currentDay.tasks.find((t) => t.id === taskId);
-      if (taskToDelete?.calendarEventId) {
-        await deleteTaskFromCalendar(taskToDelete);
-      }
     },
-    [days, currentDay],
+    [days, selectedDate],
   );
 
   const syncSelectedDayFromCalendar = useCallback(
@@ -448,19 +495,16 @@ export function useTaskManager() {
         }
 
         if (reason === 'interval') {
-          const hasNewEvents = await checkForNewCalendarEvents(
+          await checkForNewCalendarEvents(
             calendarSync.calendarId,
             lastCalendarCheckRef.time,
           );
           lastCalendarCheckRef.time = Date.now();
-          if (!hasNewEvents) {
-            return;
-          }
         }
 
         const importedTasks = await importCalendarEventsToDay(
           calendarSync.calendarId,
-          selectedDate,
+          selectedDateForCalendar,
         );
 
         const cleanedTasks = await removeTaskIfDeletedFromCalendar(
@@ -474,7 +518,7 @@ export function useTaskManager() {
 
         setDays((prevDays) => {
           const updatedDays = prevDays.map((day) => {
-            if (day.id !== selectedDayId) {
+            if (day.date !== selectedDate) {
               return day;
             }
 
@@ -500,7 +544,7 @@ export function useTaskManager() {
       applyImportedTasksToDay,
       currentDay.tasks,
       selectedDate,
-      selectedDayId,
+      selectedDateForCalendar,
     ],
   );
 
@@ -552,7 +596,50 @@ export function useTaskManager() {
     }
 
     syncSelectedDayFromCalendar('day-change');
-  }, [days.length, selectedDayId, selectedDate, syncSelectedDayFromCalendar]);
+  }, [days.length, selectedDate, syncSelectedDayFromCalendar]);
+
+  const applyWeeklyTemplate = useCallback(async () => {
+    const updatedDays: Day[] = [...days];
+    let appliedCount = 0;
+
+    DAYS_OF_WEEK.forEach((weekdayId, index) => {
+      const date = addDays(weekStart, index);
+      const dateIso = formatDateISO(date);
+      const existing = updatedDays.find((day) => day.date === dateIso);
+      const templateTasks = WEEKLY_TEMPLATE[weekdayId] || [];
+
+      if (templateTasks.length === 0) {
+        return;
+      }
+
+      if (existing && existing.tasks.length > 0) {
+        return;
+      }
+
+      const tasksForDate = buildTasksForDate(date, templateTasks, 'template');
+      const dayName = DAYS_DATA[index]?.name || getDayName(date);
+
+      if (existing) {
+        existing.tasks = tasksForDate;
+      } else {
+        updatedDays.push({
+          id: dateIso,
+          name: dayName,
+          date: dateIso,
+          tasks: tasksForDate,
+        });
+      }
+
+      appliedCount += 1;
+    });
+
+    if (appliedCount > 0) {
+      await saveDaysToStorage(updatedDays);
+      setDays(updatedDays);
+    }
+
+    return appliedCount;
+  }, [days, getDayName, weekStart]);
 
   // ============================================================================
   // ФУНКЦИЯ ОЧИСТКИ ОШИБОК
@@ -568,10 +655,10 @@ export function useTaskManager() {
 
   return {
     currentTime,
-    selectedDayId,
+    selectedDate,
     days,
     appState,
-    setSelectedDayId,
+    setSelectedDate,
     addTask,
     updateTask,
     deleteTask,
@@ -581,8 +668,10 @@ export function useTaskManager() {
     currentTask,
     nextTask,
     loadPercent,
-    selectedDate,
+    selectedDateObj: selectedDateForCalendar,
     totalHours,
+    weekDays,
+    applyWeeklyTemplate,
     storageError,
     clearStorageError,
   };

@@ -1,7 +1,7 @@
 // types/index.ts
 export interface Task {
   id: string;
-  dayId: string;
+  date: string; // ISO дата (YYYY-MM-DD)
   title: string;
   startTime: string;
   endTime: string;
@@ -27,12 +27,18 @@ export interface FormData {
 
 export interface TaskContextValue {
   currentTime: Date;
-  selectedDayId: string;
+  selectedDate: string;
+  selectedDateObj: Date;
   days: Day[];
+  weekDays: Day[];
   appState: AppStateStatus;
-  setSelectedDayId: (dayId: string) => void;
-  addTask: (formData: FormData) => Promise<void>;
-  updateTask: (taskId: string, formData: FormData) => Promise<void>;
+  setSelectedDate: (date: string) => void;
+  addTask: (formData: FormData, options?: { allowOverlap?: boolean }) => Promise<void>;
+  updateTask: (
+    taskId: string,
+    formData: FormData,
+    options?: { allowOverlap?: boolean },
+  ) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   loadDaysFromStorage: () => Promise<void>;
   currentDay: Day;
@@ -41,6 +47,7 @@ export interface TaskContextValue {
   currentTask: Task | undefined;
   nextTask: Task | undefined;
   loadPercent: number;
+  applyWeeklyTemplate: () => Promise<number>;
 }
 
 export type AppStateStatus = 'active' | 'background' | 'inactive';

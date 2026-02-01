@@ -66,14 +66,19 @@ function getCategoryForTask(title: string): string {
 
 /**
  * Парсинг времени из различных форматов
- * "9:00", "9:30", "09:00", "09:30"
+ * "9", "9:00", "9.30", "09:00", "09:30"
  */
 function parseTime(timeStr: string): string | null {
-  const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+  const trimmed = timeStr
+    .trim()
+    .replace(/\b(\d{1,2})\s+(\d{2})\b/, '$1:$2')
+    .replace(/\b(\d{1,2})\s*ч\s*(\d{2})\b/i, '$1:$2')
+    .replace(/\b(\d{1,2})\s*ч\b/i, '$1');
+  const match = trimmed.match(/^(\d{1,2})(?:(?::|\.)(\d{2}))?$/);
   if (!match) return null;
 
-  const hours = parseInt(match[1]);
-  const minutes = parseInt(match[2]);
+  const hours = parseInt(match[1], 10);
+  const minutes = match[2] ? parseInt(match[2], 10) : 0;
 
   if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
     return null;
@@ -92,46 +97,48 @@ function parseTime(timeStr: string): string | null {
 export function parseSchedule(input: string): ParsedTask[] {
   const tasks: ParsedTask[] = [];
 
-  // Разделяем по запятым и точкам с запятой
-  const entries = input.split(/[,;]/);
+  // Разделяем по запятым, точкам с запятой и переводам строк
+  const entries = input.split(/[,;\n]+/);
 
   for (const entry of entries) {
     const trimmed = entry.trim();
     if (!trimmed) continue;
 
-    // Паттерн: "Название ВРЕМЯ-ВРЕМЯ" или "Название ВРЕМЯ ВРЕМЯ"
-    // Примеры:
+    // Поддерживаем форматы:
     // "Работа 9:00-13:00"
     // "Обед 13:00-14:00"
     // "Завтрак 8:00 - 8:30"
     // "Встреча с боссом 10:00-11:30"
+    // "Работа с 9 до 17"
+    // "Работа 9-17"
+    // "Работа 9.30-17.00"
 
-    // Ищем все вхождения времени
-    const timeMatches = trimmed.match(/\d{1,2}:\d{2}/g);
+    const rangeMatch = trimmed.match(
+      /(.*?)(?:\bс\b)?\s*(\d{1,2}(?::\d{2}|\.\d{2})?|\d{1,2}|\d{1,2}\s+\d{2}|\d{1,2}\s*ч)\s*(?:-|\u2013|\u2014|до|по)\s*(\d{1,2}(?::\d{2}|\.\d{2})?|\d{1,2}|\d{1,2}\s+\d{2}|\d{1,2}\s*ч)/i,
+    );
 
-    if (!timeMatches || timeMatches.length < 2) {
-      // Если нет двух времён, пропускаем эту запись
+    if (!rangeMatch) {
       console.warn(`[ScheduleParser] Не удалось распарсить: "${trimmed}"`);
       continue;
     }
 
-    const startTimeStr = timeMatches[0];
-    const endTimeStr = timeMatches[1];
-
-    const startTime = parseTime(startTimeStr);
-    const endTime = parseTime(endTimeStr);
+    const titlePart = rangeMatch[1]?.trim() || '';
+    const startTime = parseTime(rangeMatch[2]);
+    const endTime = parseTime(rangeMatch[3]);
 
     if (!startTime || !endTime) {
       console.warn(`[ScheduleParser] Неверный формат времени в: "${trimmed}"`);
       continue;
     }
 
-    // Извлекаем название (всё до первого времени)
-    const titleMatch = trimmed.match(/^([^0-9]+)/);
-    let title = titleMatch ? titleMatch[1].trim() : 'Задача';
+    // Извлекаем название (всё до времени)
+    let title = titlePart || 'Задача';
 
-    // Очищаем название от лишних символов
+    // Очищаем название от лишних символов и служебных слов
     title = title.replace(/[:\-→><]/g, '').trim();
+    title = title.replace(/[\s\u00A0]+$/g, '');
+    title = title.replace(/\s+(с|со|до|по)\s*$/i, '').trim();
+    title = title.replace(/(с|со|до|по)\s*$/i, '').trim();
 
     if (!title) {
       title = 'Задача';
@@ -166,7 +173,10 @@ export function parseSimpleSchedule(input: string): ParsedTask[] {
     if (!trimmed) continue;
 
     // Паттерн: "Название: ВремяСтарт-ВремяКонец" или "Название: ВремяСтарт ВремяКонец"
-    const match = trimmed.match(/^([^:0-9]+?)[\s:]*(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})/);
+    // Поддерживает "Работа с 9 до 17", "Учёба 9-17", "Зал 9.30-11.00"
+    const match = trimmed.match(
+      /^([^:0-9]+?)[\s:]*?(?:\bс\b)?\s*(\d{1,2}(?::\d{2}|\.\d{2})?|\d{1,2}|\d{1,2}\s+\d{2}|\d{1,2}\s*ч)\s*[-–—до|по]\s*(\d{1,2}(?::\d{2}|\.\d{2})?|\d{1,2}|\d{1,2}\s+\d{2}|\d{1,2}\s*ч)/i,
+    );
 
     if (!match) {
       console.warn(`[ScheduleParser] Не удалось распарсить строку: "${trimmed}"`);
@@ -186,6 +196,9 @@ export function parseSimpleSchedule(input: string): ParsedTask[] {
     }
 
     title = title.replace(/[:\-→><]/g, '').trim();
+    title = title.replace(/[\s\u00A0]+$/g, '');
+    title = title.replace(/\s+(с|со|до|по)\s*$/i, '').trim();
+    title = title.replace(/(с|со|до|по)\s*$/i, '').trim();
     if (!title) title = 'Задача';
 
     const category = getCategoryForTask(title);

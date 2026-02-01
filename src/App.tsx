@@ -11,12 +11,14 @@ import {
   PanResponder,
   Keyboard,
   TouchableWithoutFeedback,
+  Alert,
 } from 'react-native';
 
 import { useTaskManager } from './hooks/useTaskManager';
 import { COLORS, SPACING, FONT_SIZES } from './constants/theme';
 import { FormData } from './types/types';
 import { ParsedTask } from './utils/scheduleParser';
+import { addDays, formatDateISO, parseDateISO } from './utils/timeUtils';
 
 import DaySelector from './components/DaySelector';
 import NavigationBar from './components/NavigationBar';
@@ -46,10 +48,12 @@ export default function App() {
 
   const {
     currentTime,
-    selectedDayId,
+    selectedDate,
+    selectedDateObj,
     days,
+    weekDays,
     appState,
-    setSelectedDayId,
+    setSelectedDate,
     addTask,
     updateTask,
     deleteTask,
@@ -59,10 +63,10 @@ export default function App() {
     currentTask,
     nextTask,
     loadPercent,
-    selectedDate,
     totalHours,
     storageError,
     clearStorageError,
+    applyWeeklyTemplate,
   } = useTaskManager();
 
   // ============================================================================
@@ -119,17 +123,17 @@ export default function App() {
   /**
    * Сохранение отредактированной задачи
    */
-  const handleSaveEditedTask = useCallback(async () => {
+  const handleSaveEditedTask = useCallback(async (options?: { allowOverlap?: boolean }) => {
     if (!editingTaskId) return;
-    await updateTask(editingTaskId, formData);
+    await updateTask(editingTaskId, formData, options);
     closeModal();
   }, [editingTaskId, formData, updateTask, closeModal]);
 
   /**
    * Добавление новой задачи
    */
-  const handleAddTask = useCallback(async () => {
-    await addTask(formData);
+  const handleAddTask = useCallback(async (options?: { allowOverlap?: boolean }) => {
+    await addTask(formData, options);
     closeModal();
   }, [formData, addTask, closeModal]);
 
@@ -157,38 +161,92 @@ export default function App() {
   /**
    * Добавление распарсенных задач
    */
+  const confirmAddConflict = useCallback((taskTitle: string) => {
+    return new Promise<boolean>((resolve) => {
+      Alert.alert(
+        'Конфликт задач',
+        `Задача "${taskTitle}" пересекается с уже существующей. Добавить всё равно?`,
+        [
+          { text: 'Пропустить', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Добавить', onPress: () => resolve(true) },
+        ],
+      );
+    });
+  }, []);
+
   const handleAddParsedTasks = useCallback(
     async (parsedTasks: ParsedTask[]) => {
+      let added = 0;
+      let skipped = 0;
+
       for (const task of parsedTasks) {
-        await addTask({
-          title: task.title,
-          startTime: task.startTime,
-          endTime: task.endTime,
-          category: task.category,
-          color: task.color,
-        });
+        try {
+          await addTask({
+            title: task.title,
+            startTime: task.startTime,
+            endTime: task.endTime,
+            category: task.category,
+            color: task.color,
+          });
+          added += 1;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : '';
+          if (message.includes('пересекается')) {
+            const shouldAdd = await confirmAddConflict(task.title);
+            if (shouldAdd) {
+              await addTask(
+                {
+                  title: task.title,
+                  startTime: task.startTime,
+                  endTime: task.endTime,
+                  category: task.category,
+                  color: task.color,
+                },
+                { allowOverlap: true },
+              );
+              added += 1;
+            } else {
+              skipped += 1;
+            }
+            continue;
+          }
+          throw error;
+        }
       }
+
+      return { added, skipped };
     },
-    [addTask],
+    [addTask, confirmAddConflict],
   );
+
+  const handleApplyWeeklyTemplate = useCallback(async () => {
+    try {
+      const appliedCount = await applyWeeklyTemplate();
+      if (appliedCount === 0) {
+        Alert.alert('Шаблон', 'Все дни недели уже заполнены.');
+        return;
+      }
+      Alert.alert('Шаблон', `Добавлены шаблоны для ${appliedCount} дней.`);
+    } catch (error) {
+      Alert.alert('Ошибка', 'Не удалось применить шаблон недели.');
+    }
+  }, [applyWeeklyTemplate]);
 
   // ============================================================================
   // НАВИГАЦИЯ МЕЖДУ ДНЯМИ
   // ============================================================================
 
   const handlePrevDay = useCallback(() => {
-    const currentIndex = days.findIndex((d) => d.id === selectedDayId);
-    if (currentIndex > 0) {
-      setSelectedDayId(days[currentIndex - 1].id);
-    }
-  }, [days, selectedDayId, setSelectedDayId]);
+    const baseDate = parseDateISO(selectedDate) || new Date();
+    const prevDate = addDays(baseDate, -1);
+    setSelectedDate(formatDateISO(prevDate));
+  }, [selectedDate, setSelectedDate]);
 
   const handleNextDay = useCallback(() => {
-    const currentIndex = days.findIndex((d) => d.id === selectedDayId);
-    if (currentIndex < days.length - 1) {
-      setSelectedDayId(days[currentIndex + 1].id);
-    }
-  }, [days, selectedDayId, setSelectedDayId]);
+    const baseDate = parseDateISO(selectedDate) || new Date();
+    const nextDate = addDays(baseDate, 1);
+    setSelectedDate(formatDateISO(nextDate));
+  }, [selectedDate, setSelectedDate]);
 
   const prevDayRef = useRef(handlePrevDay);
   const nextDayRef = useRef(handleNextDay);
@@ -218,15 +276,8 @@ export default function App() {
     }),
   ).current;
 
-  const canGoPrev = useMemo(() => {
-    const currentIndex = days.findIndex((d) => d.id === selectedDayId);
-    return currentIndex > 0;
-  }, [days, selectedDayId]);
-
-  const canGoNext = useMemo(() => {
-    const currentIndex = days.findIndex((d) => d.id === selectedDayId);
-    return currentIndex < days.length - 1;
-  }, [days, selectedDayId]);
+  const canGoPrev = useMemo(() => true, []);
+  const canGoNext = useMemo(() => true, []);
 
   // ============================================================================
   // FlatList DATA — ОДИН ЭЛЕМЕНТ ДЛЯ СОДЕРЖИМОГО
@@ -244,12 +295,16 @@ export default function App() {
             )}
 
             {/* ВЫБОР ДНЯ НЕДЕЛИ */}
-            <DaySelector days={days} selectedDayId={selectedDayId} onSelectDay={setSelectedDayId} />
+            <DaySelector
+              days={weekDays}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+            />
 
             {/* ЦИФЕРБЛАТ */}
             <ClockView
               currentTime={currentTime}
-              selectedDate={selectedDate}
+              selectedDate={selectedDateObj}
               currentDay={currentDay}
               isCurrentDay={isCurrentDay}
               tasks={tasks}
@@ -282,6 +337,13 @@ export default function App() {
               <Text style={styles.parserButtonText}>📋 Добавить расписание</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.templateButton}
+              onPress={handleApplyWeeklyTemplate}
+              activeOpacity={0.7}>
+              <Text style={styles.templateButtonText}>📅 Применить шаблон недели</Text>
+            </TouchableOpacity>
+
             {/* КНОПКА ДОБАВЛЕНИЯ ЗАДАЧИ */}
             <TouchableOpacity
               style={styles.addButton}
@@ -300,19 +362,20 @@ export default function App() {
       storageError,
       clearStorageError,
       days,
-      selectedDayId,
-      setSelectedDayId,
-      currentTime,
       selectedDate,
+      selectedDateObj,
+      weekDays,
+      setSelectedDate,
+      currentTime,
       currentDay,
       isCurrentDay,
       tasks,
-      totalHours,
       handleEditTask,
       currentTask,
       deleteTask,
       loadPercent,
       nextTask,
+      handleApplyWeeklyTemplate,
       canGoPrev,
       canGoNext,
       handlePrevDay,
@@ -392,6 +455,29 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   parserButtonText: {
+    color: COLORS.cardBackground,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  templateButton: {
+    backgroundColor: COLORS.info,
+    borderRadius: 12,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    marginVertical: SPACING.md,
+    marginHorizontal: SPACING.md,
+    width: '90%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    alignSelf: 'center',
+  },
+  templateButtonText: {
     color: COLORS.cardBackground,
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',

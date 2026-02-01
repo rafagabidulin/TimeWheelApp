@@ -19,7 +19,7 @@ import { COLORS, SPACING, FONT_SIZES, SIZES } from '../constants/theme';
 interface ScheduleParserModalProps {
   visible: boolean;
   onClose: () => void;
-  onAddTasks: (tasks: ParsedTask[]) => Promise<void>;
+  onAddTasks: (tasks: ParsedTask[]) => Promise<{ added: number; skipped: number }>;
 }
 
 /**
@@ -88,11 +88,13 @@ export default function ScheduleParserModal({
   const handleAddTasks = async () => {
     setLoading(true);
     try {
-      await onAddTasks(parsedTasks);
+      const result = await onAddTasks(parsedTasks);
       setInput('');
       setParsedTasks([]);
       setShowPreview(false);
-      Alert.alert('Успех', `Добавлено ${parsedTasks.length} задач`);
+      const skippedInfo =
+        result.skipped > 0 ? `, пропущено ${result.skipped} из-за конфликтов` : '';
+      Alert.alert('Успех', `Добавлено ${result.added} задач${skippedInfo}`);
       onClose();
     } catch (error) {
       console.error('[Parser] Error adding tasks:', error);
