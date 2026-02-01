@@ -1,7 +1,7 @@
 // components/ClockView.tsx
 import React, { useMemo } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
-import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Path, Text as SvgText, Line } from 'react-native-svg';
 import { Task, Day } from '../types/types';
 import { getAngle, getAngleRadians, getPathData, timeToHours } from '../utils/timeUtils';
 import {
@@ -9,10 +9,10 @@ import {
   CENTER_X,
   CENTER_Y,
   SVG_SIZE,
-  COLORS,
   SPACING,
   FONT_SIZES,
   ANGLE_TOP,
+  useTheme,
 } from '../constants/theme';
 
 interface ClockViewProps {
@@ -40,6 +40,8 @@ export default function ClockView({
   tasks,
   onTaskPress,
 }: ClockViewProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const currentHours = useMemo(() => {
     const hours = currentTime.getHours();
     const minutes = currentTime.getMinutes();
@@ -53,7 +55,7 @@ export default function ClockView({
 
   // Кэшируем координаты текста для каждой задачи
   const taskTextCoordinates = useMemo(() => {
-    const textRadius = CLOCK_RADIUS * 0.65;
+    const textRadius = 50;
     return tasks.map((task) => {
       const startHours = timeToHours(task.startTime);
       let endHours = timeToHours(task.endTime);
@@ -66,9 +68,13 @@ export default function ClockView({
       const midAngle = getAngle(midHours);
       const midRad = (midAngle - 90) * (Math.PI / 180);
 
+      const x = CENTER_X + textRadius * Math.cos(midRad);
+      const y = CENTER_Y + textRadius * Math.sin(midRad);
+
       return {
-        x: CENTER_X + textRadius * Math.cos(midRad),
-        y: CENTER_Y + textRadius * Math.sin(midRad),
+        x,
+        y,
+        angle: midAngle - 90,
       };
     });
   }, [tasks]);
@@ -82,8 +88,6 @@ export default function ClockView({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>TimeWheel</Text>
-
       <View style={styles.clockContainer}>
         <Svg height={SVG_SIZE} width={SVG_SIZE} style={styles.svg}>
           {/* ВНЕШНЯЯ ГРАНИЦА ЦИФЕРБЛАТА */}
@@ -92,7 +96,7 @@ export default function ClockView({
             cy={CENTER_Y}
             r={CLOCK_RADIUS}
             fill="none"
-            stroke={COLORS.clockBorder}
+            stroke={colors.clockBorder}
             strokeWidth="4"
           />
 
@@ -112,9 +116,84 @@ export default function ClockView({
                 dominantBaseline="middle"
                 fontSize={FONT_SIZES.xs}
                 fontWeight="bold"
-                fill={COLORS.textPrimary}>
+                fill={colors.textPrimary}>
                 {String(i).padStart(2, '0')}
               </SvgText>
+            );
+          })}
+
+          {/* ТОНКИЕ МЕТКИ ЧАСОВ ОТ ЦЕНТРАЛЬНОГО КРУГА */}
+          {Array.from({ length: 24 }, (_, i) => {
+            const angle = (i / 24) * 360 - 90;
+            const rad = angle * (Math.PI / 180);
+            const innerRadius = 45;
+            const outerRadius = CLOCK_RADIUS - 47;
+            const x1 = CENTER_X + innerRadius * Math.cos(rad);
+            const y1 = CENTER_Y + innerRadius * Math.sin(rad);
+            const x2 = CENTER_X + outerRadius * Math.cos(rad);
+            const y2 = CENTER_Y + outerRadius * Math.sin(rad);
+
+            return (
+              <Line
+                key={`tick-${i}`}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={colors.textSecondary}
+                strokeWidth={1}
+                opacity={0.25}
+              />
+            );
+          })}
+
+          {/* КОРОТКИЕ МЕТКИ ОТ ГРАНИЦЫ ЦИФЕРБЛАТА ВНУТРЬ */}
+          {Array.from({ length: 24 }, (_, i) => {
+            const angle = (i / 24) * 360 - 90;
+            const rad = angle * (Math.PI / 180);
+            const innerRadius = CLOCK_RADIUS - 10;
+            const outerRadius = CLOCK_RADIUS;
+            const x1 = CENTER_X + innerRadius * Math.cos(rad);
+            const y1 = CENTER_Y + innerRadius * Math.sin(rad);
+            const x2 = CENTER_X + outerRadius * Math.cos(rad);
+            const y2 = CENTER_Y + outerRadius * Math.sin(rad);
+
+            return (
+              <Line
+                key={`outer-tick-in-${i}`}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={colors.textSecondary}
+                strokeWidth={1}
+                opacity={0.25}
+              />
+            );
+          })}
+
+          {/* КОРОТКИЕ МЕТКИ С НАРУЖНОЙ СТОРОНЫ */}
+          {Array.from({ length: 24 }, (_, i) => {
+            const angle = (i / 24) * 360 - 90;
+            const rad = angle * (Math.PI / 180);
+            const innerRadius = CLOCK_RADIUS;
+            const outerRadius = CLOCK_RADIUS + 10;
+            const x1 = CENTER_X + innerRadius * Math.cos(rad);
+            const y1 = CENTER_Y + innerRadius * Math.sin(rad);
+            const x2 = CENTER_X + outerRadius * Math.cos(rad);
+            const y2 = CENTER_Y + outerRadius * Math.sin(rad);
+
+            return (
+              <Line
+                key={`outer-tick-out-${i}`}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={colors.textSecondary}
+                strokeWidth={1}
+                opacity={0.25}
+              />
             );
           })}
 
@@ -150,17 +229,18 @@ export default function ClockView({
                   fill={task.color}
                   opacity={isCurrentTask ? '0.9' : '0.6'}
                   strokeWidth={isCurrentTask ? '2' : '0'}
-                  stroke={isCurrentTask ? COLORS.textPrimary : 'transparent'}
+                stroke={isCurrentTask ? colors.textPrimary : 'transparent'}
                 />
                 <SvgText
                   x={coords.x}
                   y={coords.y}
-                  textAnchor="middle"
+                  textAnchor="start"
                   dominantBaseline="middle"
                   fontSize={isCurrentTask ? FONT_SIZES.sm : FONT_SIZES.xs}
                   fontWeight={isCurrentTask ? '700' : '600'}
-                  fill={COLORS.cardBackground}
-                  opacity={isCurrentTask ? '1' : '0.85'}>
+                  fill={colors.cardBackground}
+                  opacity={isCurrentTask ? '1' : '0.85'}
+                  transform={`rotate(${coords.angle} ${coords.x} ${coords.y})`}>
                   {task.title}
                 </SvgText>
               </React.Fragment>
@@ -173,7 +253,7 @@ export default function ClockView({
               d={`M ${CENTER_X} ${CENTER_Y} L ${
                 CENTER_X + (CLOCK_RADIUS - 20) * Math.cos(angleRad)
               } ${CENTER_Y + (CLOCK_RADIUS - 20) * Math.sin(angleRad)}`}
-              stroke={COLORS.primary}
+              stroke={colors.primary}
               strokeWidth="4"
               strokeLinecap="round"
             />
@@ -184,8 +264,8 @@ export default function ClockView({
             cx={CENTER_X}
             cy={CENTER_Y}
             r="45"
-            fill={COLORS.cardBackground}
-            stroke={COLORS.clockBorder}
+            fill={colors.cardBackground}
+            stroke={colors.clockBorder}
             strokeWidth="2"
           />
 
@@ -196,7 +276,7 @@ export default function ClockView({
             textAnchor="middle"
             fontSize={FONT_SIZES.xl}
             fontWeight="bold"
-            fill={COLORS.textPrimary}>
+            fill={colors.textPrimary}>
             {formattedTime}
           </SvgText>
 
@@ -207,7 +287,7 @@ export default function ClockView({
             textAnchor="middle"
             fontSize={FONT_SIZES.xs}
             fontWeight="bold"
-            fill={COLORS.textSecondary}>
+            fill={colors.textSecondary}>
             {dateStr}
           </SvgText>
         </Svg>
@@ -216,23 +296,18 @@ export default function ClockView({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
   container: {
     alignItems: 'center',
     marginBottom: SPACING.md,
-  },
-  title: {
-    fontSize: FONT_SIZES.xxxl,
-    fontWeight: 'bold',
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.sm,
   },
   clockContainer: {
     alignItems: 'center',
     marginBottom: SPACING.md,
   },
   svg: {
-    shadowColor: COLORS.textPrimary,
+    shadowColor: colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

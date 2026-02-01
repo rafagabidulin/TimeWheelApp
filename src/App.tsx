@@ -13,9 +13,10 @@ import {
   TouchableWithoutFeedback,
   Alert,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { useTaskManager } from './hooks/useTaskManager';
-import { COLORS, SPACING, FONT_SIZES } from './constants/theme';
+import { SPACING, FONT_SIZES, ThemeProvider, useTheme, CLOCK_RADIUS, CENTER_Y } from './constants/theme';
 import { FormData } from './types/types';
 import { ParsedTask } from './utils/scheduleParser';
 import { addDays, formatDateISO, parseDateISO } from './utils/timeUtils';
@@ -41,7 +42,10 @@ import { syncCalendarToDays } from './utils/bidirectionalSync';
  * - Обработку действий пользователя
  * - Парсинг расписания из текста
  */
-export default function App() {
+function AppContent() {
+  const { colors, scheme, toggleTheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const iconSize = 28;
   // ============================================================================
   // УПРАВЛЕНИЕ СОСТОЯНИЕМ ЗАДАЧ (весь бизнес-логика в хуке)
   // ============================================================================
@@ -248,6 +252,10 @@ export default function App() {
     setSelectedDate(formatDateISO(nextDate));
   }, [selectedDate, setSelectedDate]);
 
+  const handleGoToToday = useCallback(() => {
+    setSelectedDate(formatDateISO(new Date()));
+  }, [setSelectedDate]);
+
   const prevDayRef = useRef(handlePrevDay);
   const nextDayRef = useRef(handleNextDay);
 
@@ -301,6 +309,14 @@ export default function App() {
               onSelectDate={setSelectedDate}
             />
 
+            <View style={styles.themeToggleRow}>
+              <TouchableOpacity style={styles.themeToggleButton} onPress={toggleTheme}>
+                <Text style={styles.themeToggleText}>
+                  {scheme === 'dark' ? '☀️ Светлая тема' : '🌙 Тёмная тема'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* ЦИФЕРБЛАТ */}
             <ClockView
               currentTime={currentTime}
@@ -311,49 +327,76 @@ export default function App() {
               onTaskPress={handleEditTask}
             />
 
-            {/* ПОЛОСКА НАВИГАЦИИ */}
-            <NavigationBar
-              currentDay={currentDay}
-              canGoPrev={canGoPrev}
-              canGoNext={canGoNext}
-              onPrevDay={handlePrevDay}
-              onNextDay={handleNextDay}
-            />
+            <View style={styles.todayButtonRow}>
+              <TouchableOpacity
+                style={[
+                  styles.todayButton,
+                  isCurrentDay ? styles.todayButtonCurrent : styles.todayButtonDefault,
+                ]}
+                onPress={handleGoToToday}>
+                <Svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M21 12a9 9 0 1 1-3.02-6.73"
+                    stroke={isCurrentDay ? colors.cardBackground : colors.primary}
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                  />
+                  <Path
+                    d="M21 3v6h-6"
+                    stroke={isCurrentDay ? colors.cardBackground : colors.primary}
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              </TouchableOpacity>
+            </View>
 
-            {/* СПИСОК ЗАДАЧ */}
-            <TaskListView
-              tasks={tasks}
-              currentTask={currentTask}
-              isCurrentDay={isCurrentDay}
-              onEditTask={handleEditTask}
-              onDeleteTask={deleteTask}
-            />
+            <View style={styles.bottomSection}>
+              {/* ПОЛОСКА НАВИГАЦИИ */}
+              <NavigationBar
+                currentDay={currentDay}
+                canGoPrev={canGoPrev}
+                canGoNext={canGoNext}
+                onPrevDay={handlePrevDay}
+                onNextDay={handleNextDay}
+              />
 
-            {/* КНОПКА ПАРСЕРА РАСПИСАНИЯ */}
-            <TouchableOpacity
-              style={styles.parserButton}
-              onPress={() => setParserModalVisible(true)}
-              activeOpacity={0.7}>
-              <Text style={styles.parserButtonText}>📋 Добавить расписание</Text>
-            </TouchableOpacity>
+              {/* СПИСОК ЗАДАЧ */}
+              <TaskListView
+                tasks={tasks}
+                currentTask={currentTask}
+                isCurrentDay={isCurrentDay}
+                onEditTask={handleEditTask}
+                onDeleteTask={deleteTask}
+              />
 
-            <TouchableOpacity
-              style={styles.templateButton}
-              onPress={handleApplyWeeklyTemplate}
-              activeOpacity={0.7}>
-              <Text style={styles.templateButtonText}>📅 Применить шаблон недели</Text>
-            </TouchableOpacity>
+              {/* КНОПКА ПАРСЕРА РАСПИСАНИЯ */}
+              <TouchableOpacity
+                style={styles.parserButton}
+                onPress={() => setParserModalVisible(true)}
+                activeOpacity={0.7}>
+                <Text style={styles.parserButtonText}>📋 Добавить расписание</Text>
+              </TouchableOpacity>
 
-            {/* КНОПКА ДОБАВЛЕНИЯ ЗАДАЧИ */}
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleOpenAddModal}
-              activeOpacity={0.7}>
-              <Text style={styles.addButtonText}>+ Добавить задачу</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.templateButton}
+                onPress={handleApplyWeeklyTemplate}
+                activeOpacity={0.7}>
+                <Text style={styles.templateButtonText}>📅 Применить шаблон недели</Text>
+              </TouchableOpacity>
 
-            {/* СТАТИСТИКА */}
-            <StatsBar loadPercent={loadPercent} nextTask={nextTask} isCurrentDay={isCurrentDay} />
+              {/* КНОПКА ДОБАВЛЕНИЯ ЗАДАЧИ */}
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={handleOpenAddModal}
+                activeOpacity={0.7}>
+                <Text style={styles.addButtonText}>+ Добавить задачу</Text>
+              </TouchableOpacity>
+
+              {/* СТАТИСТИКА */}
+              <StatsBar loadPercent={loadPercent} nextTask={nextTask} isCurrentDay={isCurrentDay} />
+            </View>
           </View>
         ),
       },
@@ -376,6 +419,7 @@ export default function App() {
       loadPercent,
       nextTask,
       handleApplyWeeklyTemplate,
+      handleGoToToday,
       canGoPrev,
       canGoNext,
       handlePrevDay,
@@ -424,21 +468,30 @@ export default function App() {
   );
 }
 
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
 // ============================================================================
 // СТИЛИ
 // ============================================================================
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   parserButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: SPACING.lg,
     paddingHorizontal: SPACING.xl,
@@ -455,13 +508,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   parserButtonText: {
-    color: COLORS.cardBackground,
+    color: colors.cardBackground,
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
     textAlign: 'center',
   },
   templateButton: {
-    backgroundColor: COLORS.info,
+    backgroundColor: colors.info,
     borderRadius: 12,
     paddingVertical: SPACING.lg,
     paddingHorizontal: SPACING.xl,
@@ -478,13 +531,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   templateButtonText: {
-    color: COLORS.cardBackground,
+    color: colors.cardBackground,
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
     textAlign: 'center',
   },
   addButton: {
-    backgroundColor: COLORS.success,
+    backgroundColor: colors.success,
     borderRadius: 12,
     paddingVertical: SPACING.lg,
     paddingHorizontal: SPACING.xl,
@@ -501,9 +554,52 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   addButtonText: {
-    color: COLORS.buttonText,
+    color: colors.cardBackground,
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  todayButtonRow: {
+    position: 'absolute',
+    right: SPACING.lg,
+    top: CENTER_Y + CLOCK_RADIUS + 78,
+    zIndex: 10,
+  },
+  todayButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todayButtonCurrent: {
+    backgroundColor: colors.primary,
+  },
+  todayButtonDefault: {
+    backgroundColor: colors.cardBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bottomSection: {
+    marginTop: -SPACING.xxl,
+  },
+  themeToggleRow: {
+    width: '90%',
+    alignSelf: 'center',
+    marginBottom: SPACING.sm,
+  },
+  themeToggleButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 999,
+    backgroundColor: colors.cardBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  themeToggleText: {
+    fontSize: FONT_SIZES.sm,
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
 });

@@ -1,8 +1,8 @@
 // components/StatsBar.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { Task } from '../types/types';
-import { COLORS, SPACING, FONT_SIZES } from '../constants/theme';
+import { SPACING, FONT_SIZES, useTheme } from '../constants/theme';
 
 interface StatsBarProps {
   loadPercent: number;
@@ -14,6 +14,8 @@ interface StatsBarProps {
  * Компонент статистики и информации о следующей задаче
  */
 export default function StatsBar({ loadPercent, nextTask, isCurrentDay }: StatsBarProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <Text style={styles.statsText}>Загрузка: {loadPercent}%</Text>
@@ -32,18 +34,19 @@ export default function StatsBar({ loadPercent, nextTask, isCurrentDay }: StatsB
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
   container: {
     alignItems: 'center',
   },
   statsText: {
     fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   nextTask: {
     fontSize: FONT_SIZES.base,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: SPACING.sm,
   },
 });

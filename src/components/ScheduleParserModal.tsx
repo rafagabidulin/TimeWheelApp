@@ -1,5 +1,5 @@
 // components/ScheduleParserModal.tsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,9 +12,11 @@ import {
   ActivityIndicator,
   Keyboard,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { parseSchedule, validateParsedTask, ParsedTask } from '../utils/scheduleParser';
-import { COLORS, SPACING, FONT_SIZES, SIZES } from '../constants/theme';
+import { SPACING, FONT_SIZES, SIZES, useTheme } from '../constants/theme';
 
 interface ScheduleParserModalProps {
   visible: boolean;
@@ -32,6 +34,8 @@ export default function ScheduleParserModal({
   onClose,
   onAddTasks,
 }: ScheduleParserModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [input, setInput] = useState('');
   const [parsedTasks, setParsedTasks] = useState<ParsedTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -113,11 +117,14 @@ export default function ScheduleParserModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <View style={styles.overlay}>
-        <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={handleClose} />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={styles.overlay}>
+          <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={handleClose} />
 
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={styles.container}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <View style={styles.container}>
           {!showPreview ? (
             <>
               {/* ВВОД РАСПИСАНИЯ */}
@@ -131,7 +138,7 @@ export default function ScheduleParserModal({
               <TextInput
                 style={styles.input}
                 placeholder="Работа 9:00-13:00, обед 13:00-14:00, тренировка 19:00-20:00"
-                placeholderTextColor={COLORS.textLight}
+                placeholderTextColor={colors.textLight}
                 value={input}
                 onChangeText={setInput}
                 multiline
@@ -153,7 +160,7 @@ export default function ScheduleParserModal({
                   disabled={loading}
                   activeOpacity={0.7}>
                   {loading ? (
-                    <ActivityIndicator color={COLORS.cardBackground} />
+                    <ActivityIndicator color={colors.cardBackground} />
                   ) : (
                     <Text style={styles.parseText}>Распарсить</Text>
                   )}
@@ -198,25 +205,30 @@ export default function ScheduleParserModal({
                   disabled={loading}
                   activeOpacity={0.7}>
                   {loading ? (
-                    <ActivityIndicator color={COLORS.cardBackground} />
+                    <ActivityIndicator color={colors.cardBackground} />
                   ) : (
                     <Text style={styles.addText}>Добавить все</Text>
                   )}
                 </TouchableOpacity>
               </View>
             </>
-          )}
-          </View>
-        </TouchableWithoutFeedback>
-      </View>
+            )}
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
+  keyboardAvoid: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
-    backgroundColor: COLORS.modalOverlay,
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -225,7 +237,7 @@ const styles = StyleSheet.create({
   },
   container: {
     width: '90%',
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: SIZES.borderRadiusLarge,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.lg,
@@ -238,32 +250,32 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   hint: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     fontStyle: 'italic',
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: SIZES.borderRadius,
     padding: SPACING.md,
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textPrimary,
-    backgroundColor: '#F9F9F9',
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
     textAlignVertical: 'top',
     minHeight: 100,
   },
   preview: {
     borderRadius: SIZES.borderRadius,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     paddingVertical: SPACING.sm,
     maxHeight: 300,
   },
@@ -273,7 +285,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
     gap: SPACING.md,
   },
   taskColorDot: {
@@ -288,15 +300,15 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   taskTime: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   taskCategory: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
   },
   buttons: {
     flexDirection: 'row',
@@ -313,23 +325,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F0F0',
   },
   cancelText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: '600',
     fontSize: FONT_SIZES.sm,
   },
   parseBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   parseText: {
-    color: COLORS.cardBackground,
+    color: colors.cardBackground,
     fontWeight: '600',
     fontSize: FONT_SIZES.sm,
   },
   addBtn: {
-    backgroundColor: COLORS.success,
+    backgroundColor: colors.success,
   },
   addText: {
-    color: COLORS.cardBackground,
+    color: colors.cardBackground,
     fontWeight: '600',
     fontSize: FONT_SIZES.sm,
   },

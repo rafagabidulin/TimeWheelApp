@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,10 +11,12 @@ import {
   Alert,
   Keyboard,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FormData, Day } from '../../types/types';
-import { COLORS, SPACING, FONT_SIZES, SIZES, SCREEN } from '../../constants/theme';
+import { SPACING, FONT_SIZES, SIZES, SCREEN, useTheme } from '../../constants/theme';
 import { COLOR_OPTIONS, CATEGORY_OPTIONS } from '../../constants/theme';
 
 interface SwipeableTaskModalProps {
@@ -41,6 +43,9 @@ export default function SwipeableTaskModal({
   formData,
   setFormData,
 }: SwipeableTaskModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const timePickerStyles = useMemo(() => createTimePickerStyles(colors), [colors]);
   const translateYRef = useRef(new Animated.Value(0)).current;
   const panResponderRef = useRef<any>(null);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
@@ -168,23 +173,26 @@ export default function SwipeableTaskModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={onClose} />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={styles.overlay}>
+          <TouchableOpacity style={styles.overlayTouchable} activeOpacity={1} onPress={onClose} />
 
-        <Animated.View
-          style={[styles.modalContent, { transform: [{ translateY: translateYRef }] }]}
-          {...panResponderRef.current.panHandlers}>
-          {/* ИНДИКАТОР СВАЙПА */}
-          <View style={styles.swipeIndicator} />
+          <Animated.View
+            style={[styles.modalContent, { transform: [{ translateY: translateYRef }] }]}
+            {...panResponderRef.current.panHandlers}>
+            {/* ИНДИКАТОР СВАЙПА */}
+            <View style={styles.swipeIndicator} />
 
-          {/* СОДЕРЖИМОЕ */}
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <View style={styles.content}>
-            {/* ЗАГОЛОВОК */}
-            <View style={styles.header}>
-              <Text style={styles.title}>{isEditing ? 'Редактировать' : 'Добавить задачу'}</Text>
-              <Text style={styles.subtitle}>{currentDay.name}</Text>
-            </View>
+            {/* СОДЕРЖИМОЕ */}
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={styles.content}>
+              {/* ЗАГОЛОВОК */}
+              <View style={styles.header}>
+                <Text style={styles.title}>{isEditing ? 'Редактировать' : 'Добавить задачу'}</Text>
+                <Text style={styles.subtitle}>{currentDay.name}</Text>
+              </View>
 
             {/* НАЗВАНИЕ */}
             <View style={styles.field}>
@@ -192,7 +200,7 @@ export default function SwipeableTaskModal({
               <TextInput
                 style={styles.input}
                 placeholder="Введите название"
-                placeholderTextColor={COLORS.textLight}
+                placeholderTextColor={colors.textLight}
                 value={formData.title}
                 onChangeText={(text) => setFormData({ ...formData, title: text })}
               />
@@ -266,10 +274,11 @@ export default function SwipeableTaskModal({
                 <Text style={styles.saveText}>{isEditing ? 'Сохранить' : 'Добавить'}</Text>
               </TouchableOpacity>
             </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </Animated.View>
-      </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </View>
+      </KeyboardAvoidingView>
 
       {/* NATIVE iOS TIME PICKER ДЛЯ СТАРТОВОГО ВРЕМЕНИ */}
       {showStartTimePicker && (
@@ -296,7 +305,7 @@ export default function SwipeableTaskModal({
                 display="spinner"
                 is24Hour={true}
                 onChange={handleStartTimeChange}
-                textColor={COLORS.textPrimary}
+                textColor={colors.textPrimary}
               />
 
               {/* КНОПКА "ГОТОВО" - закрывает модалку ТОЛЬКО при нажатии */}
@@ -336,7 +345,7 @@ export default function SwipeableTaskModal({
                 display="spinner"
                 is24Hour={true}
                 onChange={handleEndTimeChange}
-                textColor={COLORS.textPrimary}
+                textColor={colors.textPrimary}
               />
 
               {/* КНОПКА "ГОТОВО" - закрывает модалку ТОЛЬКО при нажатии */}
@@ -354,17 +363,24 @@ export default function SwipeableTaskModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) => {
+  const gridWidth = SCREEN.width * 0.9 - SPACING.md * 2;
+  const colorSize = (gridWidth - SPACING.sm * 3) / 4;
+
+  return StyleSheet.create({
+  keyboardAvoid: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
-    backgroundColor: COLORS.modalOverlay,
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'flex-end',
   },
   overlayTouchable: {
     flex: 1,
   },
   modalContent: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderTopLeftRadius: SIZES.borderRadiusLarge,
     borderTopRightRadius: SIZES.borderRadiusLarge,
     maxHeight: '90%',
@@ -375,7 +391,7 @@ const styles = StyleSheet.create({
   swipeIndicator: {
     width: 40,
     height: 4,
-    backgroundColor: COLORS.textLight,
+    backgroundColor: colors.textLight,
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: SPACING.md,
@@ -389,11 +405,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
   },
   field: {
     gap: SPACING.xs,
@@ -401,16 +417,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FONT_SIZES.xs,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: SIZES.borderRadius,
     padding: SPACING.sm,
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textPrimary,
-    backgroundColor: '#F9F9F9',
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
   },
   timeButtonRow: {
     flexDirection: 'row',
@@ -420,20 +436,20 @@ const styles = StyleSheet.create({
   timeButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: SIZES.borderRadius,
     paddingVertical: SPACING.sm,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: colors.background,
     alignItems: 'center',
   },
   timeButtonText: {
     fontSize: FONT_SIZES.base,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   timeSeparatorText: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.xs,
   },
   optionGrid: {
@@ -447,37 +463,38 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     paddingHorizontal: SPACING.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: SIZES.borderRadius,
     alignItems: 'center',
   },
   optionSelected: {
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     borderWidth: 2,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.currentDayHighlight,
   },
   optionText: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   optionTextSelected: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '600',
   },
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.xs,
+    justifyContent: 'space-between',
   },
   colorOption: {
-    width: '20%',
-    aspectRatio: 1,
+    width: colorSize,
+    height: colorSize,
     borderRadius: SIZES.borderRadiusLarge,
     borderWidth: 2,
     borderColor: 'transparent',
+    marginBottom: SPACING.sm,
   },
   colorSelected: {
-    borderColor: COLORS.textPrimary,
+    borderColor: colors.textPrimary,
     borderWidth: 3,
   },
   buttons: {
@@ -495,31 +512,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F0F0',
   },
   cancelText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: '600',
     fontSize: FONT_SIZES.sm,
   },
   saveBtn: {
-    backgroundColor: COLORS.success,
+    backgroundColor: colors.success,
   },
   saveText: {
-    color: COLORS.cardBackground,
+    color: colors.cardBackground,
     fontWeight: '600',
     fontSize: FONT_SIZES.sm,
   },
-});
+  });
+};
 
-const timePickerStyles = StyleSheet.create({
+const createTimePickerStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: COLORS.modalOverlay,
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'flex-end',
   },
   overlayTouchable: {
     flex: 1,
   },
   pickerContainer: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderTopLeftRadius: SIZES.borderRadiusLarge,
     borderTopRightRadius: SIZES.borderRadiusLarge,
     paddingBottom: SPACING.lg,
@@ -529,24 +548,24 @@ const timePickerStyles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
     paddingBottom: SPACING.md,
   },
   pickerTitle: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: 'center',
   },
   closeButton: {
     marginHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.success,
+    backgroundColor: colors.success,
     borderRadius: SIZES.borderRadius,
     alignItems: 'center',
   },
   closeButtonText: {
-    color: COLORS.cardBackground,
+    color: colors.cardBackground,
     fontWeight: '600',
     fontSize: FONT_SIZES.base,
   },

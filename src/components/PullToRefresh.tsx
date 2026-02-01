@@ -1,7 +1,7 @@
 // components/PullToRefresh.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, PanResponder, RefreshControl } from 'react-native';
-import { COLORS, SPACING, FONT_SIZES } from '../constants/theme';
+import { SPACING, FONT_SIZES, useTheme } from '../constants/theme';
 
 interface PullToRefreshProps {
   onRefresh: () => Promise<void>;
@@ -18,6 +18,8 @@ export default function PullToRefresh({
   children,
   refreshing: externalRefreshing = false,
 }: PullToRefreshProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const panResponderRef = useRef<any>(null);
@@ -81,7 +83,8 @@ export default function PullToRefresh({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -90,13 +93,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   refreshText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   content: {

@@ -1,7 +1,7 @@
 // components/StorageErrorBanner.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { COLORS, SPACING, FONT_SIZES, SIZES } from '../constants/theme';
+import { SPACING, FONT_SIZES, SIZES, useTheme } from '../constants/theme';
 
 interface StorageErrorBannerProps {
   message: string;
@@ -16,6 +16,8 @@ export default function StorageErrorBanner({
   message,
   onDismiss,
 }: StorageErrorBannerProps) {
+  const { colors, scheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, scheme), [colors, scheme]);
   return (
     <View style={styles.container}>
       <View style={styles.content}>
@@ -29,19 +31,23 @@ export default function StorageErrorBanner({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (
+  colors: ReturnType<typeof useTheme>['colors'],
+  scheme: ReturnType<typeof useTheme>['scheme'],
+) =>
+  StyleSheet.create({
   container: {
     width: '90%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFF3CD',
+    backgroundColor: scheme === 'dark' ? '#2B1F10' : '#FFF3CD',
     borderRadius: SIZES.borderRadius,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
     marginBottom: SPACING.lg,
     borderLeftWidth: 4,
-    borderLeftColor: '#FFC107',
+    borderLeftColor: colors.warning,
   },
   content: {
     flexDirection: 'row',
@@ -54,7 +60,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: FONT_SIZES.sm,
-    color: '#856404',
+    color: scheme === 'dark' ? '#FCD34D' : '#856404',
     flex: 1,
     flexWrap: 'wrap',
   },
@@ -63,7 +69,7 @@ const styles = StyleSheet.create({
   },
   closeText: {
     fontSize: FONT_SIZES.base,
-    color: '#856404',
+    color: scheme === 'dark' ? '#FCD34D' : '#856404',
     fontWeight: 'bold',
   },
 });

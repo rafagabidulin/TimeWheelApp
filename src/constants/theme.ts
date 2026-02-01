@@ -1,5 +1,6 @@
 // constants/theme.ts
-import { Dimensions } from 'react-native';
+import React, { createContext, useContext, useMemo, useState } from 'react';
+import { Dimensions, useColorScheme } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -33,63 +34,162 @@ export const ANGLE_TOP = -90;
 // ЦВЕТА
 // ============================================================================
 
-export const COLORS = {
-  primary: '#2196F3',
-  success: '#4CAF50',
-  warning: '#FF9800',
-  danger: '#F44336',
-  error: '#E91E63',
-  info: '#00BCD4',
-  secondary: '#9C27B0',
-  gold: '#FFC107',
-  brown: '#795548',
+export const LIGHT_COLORS = {
+  primary: '#3B82F6',
+  success: '#22C55E',
+  warning: '#F59E0B',
+  danger: '#EF4444',
+  error: '#EF4444',
+  info: '#38BDF8',
+  secondary: '#6366F1',
+  gold: '#FBBF24',
+  brown: '#A16207',
 
   // Фоны
-  background: '#F5F5F5',
+  background: '#F5F7FA',
   cardBackground: '#FFFFFF',
   modalOverlay: 'rgba(0, 0, 0, 0.5)',
 
   // Текст
-  textPrimary: '#333333',
-  textSecondary: '#666666',
-  textTertiary: '#999999',
-  textLight: '#CCCCCC',
+  textPrimary: '#111827',
+  textSecondary: '#6B7280',
+  textTertiary: '#9CA3AF',
+  textLight: '#D1D5DB',
 
   // Границы
-  border: '#DDDDDD',
-  borderLight: '#F0F0F0',
+  border: '#E5E7EB',
+  borderLight: '#F3F4F6',
 
   // Специальные
-  clockBorder: '#E0E0E0',
-  currentDayHighlight: '#F0F7FF',
-  currentDayBorder: '#2196F3',
+  clockBorder: '#E5E7EB',
+  currentDayHighlight: '#EFF6FF',
+  currentDayBorder: '#3B82F6',
 } as const;
+
+export const DARK_COLORS = {
+  primary: '#6366F1',
+  success: '#22C55E',
+  warning: '#F59E0B',
+  danger: '#EF4444',
+  error: '#EF4444',
+  info: '#38BDF8',
+  secondary: '#8B5CF6',
+  gold: '#FBBF24',
+  brown: '#A16207',
+
+  // Фоны
+  background: '#0B0F1A',
+  cardBackground: '#111827',
+  modalOverlay: 'rgba(0, 0, 0, 0.6)',
+
+  // Текст
+  textPrimary: '#E5E7EB',
+  textSecondary: '#9CA3AF',
+  textTertiary: '#6B7280',
+  textLight: '#4B5563',
+
+  // Границы
+  border: '#1F2937',
+  borderLight: '#111827',
+
+  // Специальные
+  clockBorder: '#374151',
+  currentDayHighlight: '#111827',
+  currentDayBorder: '#6366F1',
+} as const;
+
+export const COLORS = LIGHT_COLORS;
+
+export type ThemeColors = typeof LIGHT_COLORS;
+
+export function getColors(scheme: 'light' | 'dark' | null | undefined): ThemeColors {
+  return scheme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
+}
+
+type ThemeMode = 'system' | 'light' | 'dark';
+
+type ThemeContextValue = {
+  colors: ThemeColors;
+  scheme: 'light' | 'dark';
+  mode: ThemeMode;
+  setMode: (mode: ThemeMode) => void;
+  toggleTheme: () => void;
+};
+
+const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const systemScheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const [mode, setMode] = useState<ThemeMode>('system');
+
+  const scheme = mode === 'system' ? systemScheme : mode;
+  const colors = useMemo(() => getColors(scheme), [scheme]);
+
+  const toggleTheme = () => {
+    setMode((prev) => {
+      if (prev === 'system') {
+        return systemScheme === 'dark' ? 'light' : 'dark';
+      }
+      return prev === 'dark' ? 'light' : 'dark';
+    });
+  };
+
+  const value = useMemo(
+    () => ({
+      colors,
+      scheme,
+      mode,
+      setMode,
+      toggleTheme,
+    }),
+    [colors, scheme, mode],
+  );
+
+  return React.createElement(ThemeContext.Provider, { value }, children);
+}
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+
+  if (!context) {
+    return {
+      colors: getColors(scheme),
+      scheme,
+      mode: 'system' as ThemeMode,
+      setMode: () => {},
+      toggleTheme: () => {},
+    };
+  }
+
+  return context;
+}
 
 // ============================================================================
 // КАТЕГОРИИ И ИХ ЦВЕТА
 // ============================================================================
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  work: COLORS.success,
-  food: COLORS.gold,
-  sports: COLORS.error,
-  study: COLORS.secondary,
-  home: COLORS.brown,
-  leisure: COLORS.info,
-  custom: COLORS.primary,
+  work: '#22C55E',
+  food: '#FBBF24',
+  sports: '#EF4444',
+  study: '#6366F1',
+  home: '#A16207',
+  leisure: '#38BDF8',
+  custom: '#3B82F6',
 };
 
 export const CATEGORY_OPTIONS = ['work', 'food', 'sports', 'study', 'home', 'leisure', 'custom'] as const;
 
 export const COLOR_OPTIONS = [
-  COLORS.success,
+  CATEGORY_COLORS.work,
+  CATEGORY_COLORS.food,
+  CATEGORY_COLORS.custom,
+  CATEGORY_COLORS.sports,
+  CATEGORY_COLORS.leisure,
+  CATEGORY_COLORS.home,
+  CATEGORY_COLORS.study,
   COLORS.warning,
-  COLORS.primary,
-  COLORS.error,
-  COLORS.gold,
-  COLORS.brown,
-  COLORS.info,
-  COLORS.secondary,
 ] as const;
 
 // ============================================================================

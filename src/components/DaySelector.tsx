@@ -1,8 +1,8 @@
 // components/DaySelector.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { Day } from '../types/types';
-import { COLORS, SPACING, FONT_SIZES, SIZES } from '../constants/theme';
+import { SPACING, FONT_SIZES, SIZES, useTheme } from '../constants/theme';
 
 interface DaySelectorProps {
   days: Day[];
@@ -15,6 +15,9 @@ interface DaySelectorProps {
  * Отображает полоску дней с возможностью выбора
  */
 export default function DaySelector({ days, selectedDate, onSelectDate }: DaySelectorProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       {days.map((day) => (
@@ -32,7 +35,8 @@ export default function DaySelector({ days, selectedDate, onSelectDate }: DaySel
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
   container: {
     flexDirection: 'row',
     paddingHorizontal: SPACING.lg,
@@ -42,24 +46,24 @@ const styles = StyleSheet.create({
   dayChip: {
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: SIZES.borderRadiusExtraLarge,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   selectedDayChip: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   dayText: {
     fontSize: FONT_SIZES.base,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   selectedDayText: {
-    color: COLORS.cardBackground,
+    color: colors.cardBackground,
     fontWeight: '700',
   },
 });

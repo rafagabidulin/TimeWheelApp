@@ -1,8 +1,8 @@
 // components/TaskListView.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, TouchableOpacity, Text, FlatList } from 'react-native';
 import { Task } from '../types/types';
-import { COLORS, SPACING, FONT_SIZES, SIZES } from '../constants/theme';
+import { SPACING, FONT_SIZES, SIZES, useTheme } from '../constants/theme';
 import { getDurationMinutes } from '../utils/timeUtils';
 
 interface TaskListViewProps {
@@ -29,6 +29,9 @@ export default function TaskListView({
   onEditTask,
   onDeleteTask,
 }: TaskListViewProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const formatDuration = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -90,24 +93,25 @@ export default function TaskListView({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
   container: {
     width: '100%',
     marginBottom: SPACING.lg,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: SIZES.borderRadius,
     overflow: 'hidden',
   },
   emptyContainer: {
     width: '100%',
     paddingVertical: SPACING.xl,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: SIZES.borderRadius,
     marginBottom: SPACING.lg,
   },
   emptyText: {
     fontSize: FONT_SIZES.base,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     textAlign: 'center',
   },
   taskWrapper: {
@@ -119,12 +123,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    borderBottomColor: colors.borderLight,
   },
   taskItemCurrent: {
-    backgroundColor: COLORS.currentDayHighlight,
+    backgroundColor: colors.currentDayHighlight,
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.currentDayBorder,
+    borderLeftColor: colors.currentDayBorder,
   },
   taskColorBar: {
     width: 4,
@@ -138,20 +142,20 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: FONT_SIZES.base,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   taskTitleCurrent: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
   },
   taskTime: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     marginTop: SPACING.sm,
   },
   taskDuration: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     marginLeft: SPACING.md,
     textAlign: 'right',
     minWidth: 56,
@@ -161,7 +165,7 @@ const styles = StyleSheet.create({
   },
   taskDeleteIcon: {
     fontSize: FONT_SIZES.lg,
-    color: COLORS.danger,
+    color: colors.danger,
     fontWeight: 'bold',
   },
 });

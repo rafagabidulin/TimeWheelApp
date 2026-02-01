@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { COLORS, SPACING, FONT_SIZES, SIZES } from '../../constants/theme';
+import { SPACING, FONT_SIZES, SIZES, useTheme } from '../../constants/theme';
 
 interface InlineTimePickerProps {
   onTimeSelect: (hours: number, minutes: number) => void;
@@ -9,6 +9,8 @@ interface InlineTimePickerProps {
 }
 
 export default function InlineTimePicker({ onTimeSelect, initialTime }: InlineTimePickerProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [date, setDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState(false);
 
@@ -75,7 +77,7 @@ export default function InlineTimePicker({ onTimeSelect, initialTime }: InlineTi
                 display="spinner"
                 is24Hour={true}
                 onChange={handleDateChange}
-                textColor={COLORS.textPrimary}
+                textColor={colors.textPrimary}
               />
 
               {/* КНОПКА ЗАКРЫТИЯ */}
@@ -93,32 +95,33 @@ export default function InlineTimePicker({ onTimeSelect, initialTime }: InlineTi
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
   timeButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: SIZES.borderRadius,
     paddingVertical: SPACING.sm,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   timeButtonText: {
     fontSize: FONT_SIZES.base,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: COLORS.modalOverlay,
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'flex-end',
   },
   overlayTouchable: {
     flex: 1,
   },
   pickerContainer: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderTopLeftRadius: SIZES.borderRadiusLarge,
     borderTopRightRadius: SIZES.borderRadiusLarge,
     paddingBottom: SPACING.lg,
@@ -128,24 +131,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
     paddingBottom: SPACING.md,
   },
   pickerTitle: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: 'center',
   },
   closeButton: {
     marginHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.success,
+    backgroundColor: colors.success,
     borderRadius: SIZES.borderRadius,
     alignItems: 'center',
   },
   closeButtonText: {
-    color: COLORS.cardBackground,
+    color: colors.cardBackground,
     fontWeight: '600',
     fontSize: FONT_SIZES.base,
   },

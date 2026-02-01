@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { Day } from '../types/types';
-import { COLORS, SPACING, FONT_SIZES, SIZES } from '../constants/theme';
+import { SPACING, FONT_SIZES, SIZES, useTheme } from '../constants/theme';
 import { parseDateISO } from '../utils/timeUtils';
 
 
@@ -25,6 +25,8 @@ export default function NavigationBar({
   onPrevDay,
   onNextDay,
 }: NavigationBarProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const getMonthName = (month: number): string => {
     const months = [
       'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн',
@@ -67,24 +69,24 @@ export default function NavigationBar({
   );
 }
 
-
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    marginTop: -8,
+    borderTopColor: colors.border,
+    marginTop: -SPACING.xl,
   },
   navButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
   },
   navButtonText: {
     fontSize: FONT_SIZES.xl,
-    color: COLORS.cardBackground,
+    color: colors.cardBackground,
     fontWeight: 'bold',
   },
   dateInfoContainer: {
@@ -104,11 +106,11 @@ const styles = StyleSheet.create({
   dayOfWeekText: {
     fontSize: FONT_SIZES.base,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   dateText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: '500',
   },
 });
