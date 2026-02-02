@@ -24,7 +24,10 @@ export default function StorageErrorBanner({
         <Text style={styles.icon}>⚠️</Text>
         <Text style={styles.message}>{message}</Text>
       </View>
-      <TouchableOpacity style={styles.closeButton} onPress={onDismiss}>
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={onDismiss}
+        testID="storage-error-dismiss">
         <Text style={styles.closeText}>✕</Text>
       </TouchableOpacity>
     </View>

@@ -25,7 +25,8 @@ export default function DaySelector({ days, selectedDate, onSelectDate }: DaySel
           key={day.id}
           style={[styles.dayChip, selectedDate === day.date && styles.selectedDayChip]}
           onPress={() => onSelectDate(day.date)}
-          activeOpacity={0.7}>
+          activeOpacity={0.7}
+          testID={`day-selector-${day.id}`}>
           <Text style={[styles.dayText, selectedDate === day.date && styles.selectedDayText]}>
             {day.name}
           </Text>

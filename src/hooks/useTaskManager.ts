@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Day, Task, FormData } from '../types/types';
 import { mockDays } from '../utils/mockData';
 import { loadDaysFromStorage, saveDaysToStorage, StorageError } from '../utils/storageUtils';
@@ -19,8 +19,10 @@ import {
 } from '../utils/timeUtils';
 import { DAYS_DATA, DAYS_OF_WEEK } from '../constants/theme';
 import { WEEKLY_TEMPLATE, buildTasksForDate } from '../utils/templates';
+import { logger } from '../utils/logger';
 
 export function useTaskManager() {
+  const CALENDAR_SYNC_INTERVAL_MS = 15000;
   // ============================================================================
   // STATE
   // ============================================================================
@@ -93,33 +95,22 @@ export function useTaskManager() {
 
   const tasks = currentDay.tasks || [];
 
-  // Сортируем задачи по времени
-  const sortedTasks = [...tasks].sort((a, b) => {
-    const timeA = parseInt(a.startTime.replace(':', ''));
-    const timeB = parseInt(b.startTime.replace(':', ''));
-    return timeA - timeB;
-  });
+  const sortedTasks = useMemo(() => {
+    return [...tasks].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+  }, [tasks]);
+
+  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
 
   const currentTask = sortedTasks.find((task) => {
-    const taskStartTime = parseInt(task.startTime.replace(':', ''));
-    const taskEndTime = parseInt(task.endTime.replace(':', ''));
-    const currentTimeValue = parseInt(
-      `${String(currentTime.getHours()).padStart(2, '0')}${String(
-        currentTime.getMinutes(),
-      ).padStart(2, '0')}`,
-    );
-    return currentTimeValue >= taskStartTime && currentTimeValue < taskEndTime;
+    const taskStart = timeToMinutes(task.startTime);
+    const taskEndRaw = timeToMinutes(task.endTime);
+    const taskEnd = taskEndRaw <= taskStart ? taskEndRaw + 24 * 60 : taskEndRaw;
+    const adjustedNow =
+      taskEndRaw <= taskStart && currentMinutes < taskStart ? currentMinutes + 24 * 60 : currentMinutes;
+    return adjustedNow >= taskStart && adjustedNow < taskEnd;
   });
 
-  const nextTask = sortedTasks.find((task) => {
-    const taskStartTime = parseInt(task.startTime.replace(':', ''));
-    const currentTimeValue = parseInt(
-      `${String(currentTime.getHours()).padStart(2, '0')}${String(
-        currentTime.getMinutes(),
-      ).padStart(2, '0')}`,
-    );
-    return taskStartTime > currentTimeValue;
-  });
+  const nextTask = sortedTasks.find((task) => timeToMinutes(task.startTime) > currentMinutes);
 
   const selectedDateForCalendar = selectedDateObj;
 
@@ -177,11 +168,12 @@ export function useTaskManager() {
   // ============================================================================
 
   const loadDaysFromStorageWrapper = useCallback(async () => {
+    setStorageError(null);
     try {
       if (!calendarInitializedRef.current) {
         const calendarSync = await initializeCalendarSync();
         if (calendarSync.hasPermission && calendarSync.calendarId) {
-          console.log('[useTaskManager] Calendar sync initialized');
+          logger.log('[useTaskManager] Calendar sync initialized');
 
           let loaded = await loadDaysFromStorage();
           if (loaded.length === 0) {
@@ -194,11 +186,11 @@ export function useTaskManager() {
             const syncedDays = await syncCalendarToAllDays(normalized, calendarSync.calendarId);
             await saveDaysToStorage(syncedDays);
             setDays(syncedDays);
-            console.log('[useTaskManager] Calendar events synced to days');
+            logger.log('[useTaskManager] Calendar events synced to days');
             calendarInitializedRef.current = true;
             return;
           } catch (syncError) {
-            console.warn('[useTaskManager] Calendar sync error:', syncError);
+            logger.warn('[useTaskManager] Calendar sync error:', syncError);
           }
         }
         calendarInitializedRef.current = true;
@@ -213,11 +205,10 @@ export function useTaskManager() {
         await saveDaysToStorage(mockDays);
         setDays(mockDays);
       }
-      setStorageError(null);
     } catch (error) {
       const message = error instanceof StorageError ? error.message : 'Unknown error';
       setStorageError(message);
-      console.error('[useTaskManager] Failed to load days:', error);
+      logger.error('[useTaskManager] Failed to load days:', error);
       setDays(mockDays);
     }
   }, []);
@@ -299,14 +290,14 @@ export function useTaskManager() {
             const updatedDay = applyImportedTasksToDay(day, importedTasks);
             syncedDays = syncedDays.map((d) => (d.id === day.id ? updatedDay : d));
           } catch (dayError) {
-            console.warn('[useTaskManager] Error syncing day:', day.id, dayError);
+            logger.warn('[useTaskManager] Error syncing day:', day.id, dayError);
             continue;
           }
         }
 
         return syncedDays;
       } catch (error) {
-        console.error('[useTaskManager] Error syncing calendar to days:', error);
+        logger.error('[useTaskManager] Error syncing calendar to days:', error);
         return daysToSync;
       }
     },
@@ -548,13 +539,13 @@ export function useTaskManager() {
           });
 
           saveDaysToStorage(updatedDays).catch((error) => {
-            console.error('[useTaskManager] Error saving synced days:', error);
+            logger.error('[useTaskManager] Error saving synced days:', error);
           });
 
           return updatedDays;
         });
       } catch (error) {
-        console.warn('[useTaskManager] Calendar sync error:', error);
+        logger.warn('[useTaskManager] Calendar sync error:', error);
       }
     },
     [applyImportedTasksToDay],
@@ -601,7 +592,7 @@ export function useTaskManager() {
 
     calendarCheckIntervalRef.current = setInterval(async () => {
       await syncSelectedDayFromCalendar('interval');
-    }, 15000);
+    }, CALENDAR_SYNC_INTERVAL_MS);
 
     return () => {
       if (calendarCheckIntervalRef.current) {

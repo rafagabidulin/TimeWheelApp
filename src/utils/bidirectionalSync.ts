@@ -3,6 +3,7 @@ import * as Calendar from 'expo-calendar';
 import { Day, Task } from '../types/types';
 import { v4 as uuidv4 } from 'uuid';
 import { formatDateISO, parseDateISO } from './timeUtils';
+import { logger } from './logger';
 
 /**
  * Двусторонняя синхронизация между TimeWheel и календарем iPhone
@@ -11,6 +12,7 @@ import { formatDateISO, parseDateISO } from './timeUtils';
  */
 
 const TIMEWHEEL_MARKER = 'TimeWheel App'; // Маркер для идентификации наших событий
+const CALENDAR_LOOKBACK_MS = 60 * 1000;
 
 /**
  * Преобразовать значение в Date если нужно
@@ -52,7 +54,7 @@ export async function importCalendarEventsToDay(calendarId: string, date: Date):
     const events = await Calendar.getEventsAsync([calendarId], startOfDay, endOfDay);
 
     if (!events || events.length === 0) {
-      console.log('[BidirectionalSync] No events found for date:', date.toDateString());
+      logger.log('[BidirectionalSync] No events found for date:', date.toDateString());
       return [];
     }
 
@@ -71,7 +73,7 @@ export async function importCalendarEventsToDay(calendarId: string, date: Date):
 
         // Пропускаем события без времени
         if (!startDate || !endDate) {
-          console.warn('[BidirectionalSync] Event has no valid dates:', event.title);
+        logger.warn('[BidirectionalSync] Event has no valid dates:', event.title);
           continue;
         }
 
@@ -107,16 +109,16 @@ export async function importCalendarEventsToDay(calendarId: string, date: Date):
         };
 
         importedTasks.push(task);
-        console.log('[BidirectionalSync] Imported event:', event.title, `${startTime}-${endTime}`);
+        logger.log('[BidirectionalSync] Imported event:', event.title, `${startTime}-${endTime}`);
       } catch (eventError) {
-        console.warn('[BidirectionalSync] Error processing event:', event.title, eventError);
+        logger.warn('[BidirectionalSync] Error processing event:', event.title, eventError);
         continue;
       }
     }
 
     return importedTasks;
   } catch (error) {
-    console.error('[BidirectionalSync] Error importing events:', error);
+    logger.error('[BidirectionalSync] Error importing events:', error);
     return [];
   }
 }
@@ -138,7 +140,7 @@ export async function syncCalendarToDays(days: Day[], calendarId: string): Promi
     const events = await Calendar.getEventsAsync([calendarId], startDate, endDate);
 
     if (!events || events.length === 0) {
-      console.log('[BidirectionalSync] No events in calendar to sync');
+      logger.log('[BidirectionalSync] No events in calendar to sync');
       return days;
     }
 
@@ -175,7 +177,7 @@ export async function syncCalendarToDays(days: Day[], calendarId: string): Promi
         });
 
         if (dayIndex === -1) {
-          console.warn('[BidirectionalSync] Day not found for event:', event.title);
+          logger.warn('[BidirectionalSync] Day not found for event:', event.title);
           continue;
         }
 
@@ -187,7 +189,7 @@ export async function syncCalendarToDays(days: Day[], calendarId: string): Promi
         );
 
         if (taskExists) {
-          console.log('[BidirectionalSync] Task already imported:', event.title);
+          logger.log('[BidirectionalSync] Task already imported:', event.title);
           continue;
         }
 
@@ -196,7 +198,7 @@ export async function syncCalendarToDays(days: Day[], calendarId: string): Promi
         const endDate = ensureDate(event.endDate);
 
         if (!startDate || !endDate) {
-          console.warn('[BidirectionalSync] Event has no valid dates:', event.title);
+          logger.warn('[BidirectionalSync] Event has no valid dates:', event.title);
           continue;
         }
 
@@ -227,17 +229,17 @@ export async function syncCalendarToDays(days: Day[], calendarId: string): Promi
 
         syncedDays[dayIndex].tasks.push(task);
         syncedCount++;
-        console.log('[BidirectionalSync] Synced event to day:', event.title);
+        logger.log('[BidirectionalSync] Synced event to day:', event.title);
       } catch (eventError) {
-        console.warn('[BidirectionalSync] Error syncing event:', event.title, eventError);
+        logger.warn('[BidirectionalSync] Error syncing event:', event.title, eventError);
         continue;
       }
     }
 
-    console.log('[BidirectionalSync] Synced', syncedCount, 'events total');
+    logger.log('[BidirectionalSync] Synced', syncedCount, 'events total');
     return syncedDays;
   } catch (error) {
-    console.error('[BidirectionalSync] Error syncing calendar:', error);
+    logger.error('[BidirectionalSync] Error syncing calendar:', error);
     return days;
   }
 }
@@ -269,7 +271,7 @@ function getColorFromEvent(event: Calendar.Event): string {
 
     return colorMap[eventColor] || '#4CAF50'; // Дефолтный зеленый
   } catch (error) {
-    console.warn('[BidirectionalSync] Error getting event color:', error);
+    logger.warn('[BidirectionalSync] Error getting event color:', error);
     return '#4CAF50';
   }
 }
@@ -333,7 +335,7 @@ export async function checkForNewCalendarEvents(
   try {
     const now = Date.now();
     const lastSync = new Date(lastSyncTime);
-    const checkStart = new Date(lastSync.getTime() - 60 * 1000); // За минуту до синхро
+    const checkStart = new Date(lastSync.getTime() - CALENDAR_LOOKBACK_MS); // За минуту до синхро
 
     const events = await Calendar.getEventsAsync([calendarId], checkStart, new Date(now));
 
@@ -350,7 +352,7 @@ export async function checkForNewCalendarEvents(
 
     return newEvents.length > 0;
   } catch (error) {
-    console.error('[BidirectionalSync] Error checking for new events:', error);
+    logger.error('[BidirectionalSync] Error checking for new events:', error);
     return false;
   }
 }
@@ -376,14 +378,14 @@ export async function removeTaskIfDeletedFromCalendar(
       }
 
       if (!eventIds.has(task.calendarEventId)) {
-        console.log('[BidirectionalSync] Task deleted from calendar:', task.title);
+        logger.log('[BidirectionalSync] Task deleted from calendar:', task.title);
         return false; // Удаляем если события нет в календаре
       }
 
       return true;
     });
   } catch (error) {
-    console.error('[BidirectionalSync] Error removing deleted tasks:', error);
+    logger.error('[BidirectionalSync] Error removing deleted tasks:', error);
     return tasks;
   }
 }

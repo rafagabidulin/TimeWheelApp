@@ -2,6 +2,7 @@
 import * as Calendar from 'expo-calendar';
 import { Platform } from 'react-native';
 import { Task } from '../types/types';
+import { logger } from './logger';
 
 /**
  * Управление синхронизацией с календарем iPhone
@@ -18,7 +19,7 @@ export async function requestCalendarPermissions(): Promise<boolean> {
     const { status } = await Calendar.requestCalendarPermissionsAsync();
     return status === 'granted';
   } catch (error) {
-    console.error('[CalendarSync] Permission error:', error);
+    logger.error('[CalendarSync] Permission error:', error);
     return false;
   }
 }
@@ -32,7 +33,7 @@ export async function getOrCreateTimeWheelCalendar(): Promise<string | null> {
     const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
 
     if (!calendars || calendars.length === 0) {
-      console.warn('[CalendarSync] No calendars available');
+      logger.warn('[CalendarSync] No calendars available');
       return null;
     }
 
@@ -42,7 +43,7 @@ export async function getOrCreateTimeWheelCalendar(): Promise<string | null> {
     );
 
     if (timeWheelCal) {
-      console.log('[CalendarSync] Found existing TimeWheel calendar:', timeWheelCal.id);
+      logger.log('[CalendarSync] Found existing TimeWheel calendar:', timeWheelCal.id);
       return timeWheelCal.id;
     }
 
@@ -60,11 +61,11 @@ export async function getOrCreateTimeWheelCalendar(): Promise<string | null> {
             name: TIMEWHEEL_CALENDAR_NAME,
           });
 
-          console.log('[CalendarSync] Created new TimeWheel calendar:', calendarId);
+          logger.log('[CalendarSync] Created new TimeWheel calendar:', calendarId);
           return calendarId;
         }
       } catch (createError) {
-        console.warn(
+        logger.warn(
           '[CalendarSync] Cannot create new calendar, using default:',
           createError instanceof Error ? createError.message : 'Unknown error',
         );
@@ -72,13 +73,13 @@ export async function getOrCreateTimeWheelCalendar(): Promise<string | null> {
         // Fallback: используем календарь по умолчанию (обычно "Календарь")
         const primaryCalendar = calendars.find((cal) => cal.isPrimaryForSource);
         if (primaryCalendar) {
-          console.log('[CalendarSync] Using primary calendar:', primaryCalendar.id);
+          logger.log('[CalendarSync] Using primary calendar:', primaryCalendar.id);
           return primaryCalendar.id;
         }
 
         // Если нет primary, используем первый доступный
         if (calendars[0]) {
-          console.log('[CalendarSync] Using first available calendar:', calendars[0].id);
+          logger.log('[CalendarSync] Using first available calendar:', calendars[0].id);
           return calendars[0].id;
         }
       }
@@ -86,7 +87,7 @@ export async function getOrCreateTimeWheelCalendar(): Promise<string | null> {
 
     return null;
   } catch (error) {
-    console.error('[CalendarSync] Error getting calendar:', error);
+    logger.error('[CalendarSync] Error getting calendar:', error);
     return null;
   }
 }
@@ -121,13 +122,13 @@ export async function addTaskToCalendar(task: Task, date: Date): Promise<string 
   try {
     const hasPermission = await requestCalendarPermissions();
     if (!hasPermission) {
-      console.warn('[CalendarSync] No permission to access calendar');
+      logger.warn('[CalendarSync] No permission to access calendar');
       return null;
     }
 
     const calendarId = await getOrCreateTimeWheelCalendar();
     if (!calendarId) {
-      console.warn('[CalendarSync] Could not get calendar ID');
+      logger.warn('[CalendarSync] Could not get calendar ID');
       return null;
     }
 
@@ -135,10 +136,10 @@ export async function addTaskToCalendar(task: Task, date: Date): Promise<string 
 
     const eventId = await Calendar.createEventAsync(calendarId, eventData);
 
-    console.log('[CalendarSync] Event created:', eventId);
+    logger.log('[CalendarSync] Event created:', eventId);
     return eventId;
   } catch (error) {
-    console.error('[CalendarSync] Error adding event:', error);
+    logger.error('[CalendarSync] Error adding event:', error);
     return null;
   }
 }
@@ -168,10 +169,10 @@ export async function updateTaskInCalendar(
       futureEvents: false,
     });
 
-    console.log('[CalendarSync] Event updated:', calendarEventId);
+    logger.log('[CalendarSync] Event updated:', calendarEventId);
     return true;
   } catch (error) {
-    console.error('[CalendarSync] Error updating event:', error);
+    logger.error('[CalendarSync] Error updating event:', error);
     return false;
   }
 }
@@ -190,10 +191,10 @@ export async function removeTaskFromCalendar(calendarEventId: string): Promise<b
       futureEvents: false,
     });
 
-    console.log('[CalendarSync] Event deleted:', calendarEventId);
+    logger.log('[CalendarSync] Event deleted:', calendarEventId);
     return true;
   } catch (error) {
-    console.error('[CalendarSync] Error deleting event:', error);
+    logger.error('[CalendarSync] Error deleting event:', error);
     return false;
   }
 }
@@ -223,7 +224,7 @@ export async function getTimeWheelEventsFromCalendar(
       (event) => event.title && !event.allDay && event.notes?.includes('TimeWheel'),
     );
   } catch (error) {
-    console.error('[CalendarSync] Error getting events:', error);
+    logger.error('[CalendarSync] Error getting events:', error);
     return [];
   }
 }
@@ -240,11 +241,11 @@ export async function initializeCalendarSync(): Promise<{
     const calendarId = await getOrCreateTimeWheelCalendar();
 
     if (hasPermission && calendarId) {
-      console.log('[CalendarSync] ✓ Calendar sync ready');
+      logger.log('[CalendarSync] ✓ Calendar sync ready');
     } else if (!hasPermission) {
-      console.warn('[CalendarSync] ⚠ Calendar permission not granted');
+      logger.warn('[CalendarSync] ⚠ Calendar permission not granted');
     } else {
-      console.warn('[CalendarSync] ⚠ Could not get calendar');
+      logger.warn('[CalendarSync] ⚠ Could not get calendar');
     }
 
     return {
@@ -252,7 +253,7 @@ export async function initializeCalendarSync(): Promise<{
       calendarId,
     };
   } catch (error) {
-    console.error('[CalendarSync] Initialization error:', error);
+    logger.error('[CalendarSync] Initialization error:', error);
     return {
       hasPermission: false,
       calendarId: null,

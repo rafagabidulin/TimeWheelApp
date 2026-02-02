@@ -240,7 +240,8 @@ export default function ClockView({
                   fontWeight={isCurrentTask ? '700' : '600'}
                   fill={colors.cardBackground}
                   opacity={isCurrentTask ? '1' : '0.85'}
-                  transform={`rotate(${coords.angle} ${coords.x} ${coords.y})`}>
+                  transform={`rotate(${coords.angle} ${coords.x} ${coords.y})`}
+                  testID={`clock-task-${task.id}`}>
                   {task.title}
                 </SvgText>
               </React.Fragment>
@@ -276,7 +277,8 @@ export default function ClockView({
             textAnchor="middle"
             fontSize={FONT_SIZES.xl}
             fontWeight="bold"
-            fill={colors.textPrimary}>
+            fill={colors.textPrimary}
+            testID="clock-time">
             {formattedTime}
           </SvgText>
 
@@ -287,7 +289,8 @@ export default function ClockView({
             textAnchor="middle"
             fontSize={FONT_SIZES.xs}
             fontWeight="bold"
-            fill={colors.textSecondary}>
+            fill={colors.textSecondary}
+            testID="clock-date">
             {dateStr}
           </SvgText>
         </Svg>

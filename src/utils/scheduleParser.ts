@@ -1,5 +1,6 @@
 // utils/scheduleParser.ts
 import { FormData } from '../types/types';
+import { logger } from './logger';
 
 /**
  * Результат парсинга расписания
@@ -118,7 +119,7 @@ export function parseSchedule(input: string): ParsedTask[] {
     );
 
     if (!rangeMatch) {
-      console.warn(`[ScheduleParser] Не удалось распарсить: "${trimmed}"`);
+      logger.warn(`[ScheduleParser] Не удалось распарсить: "${trimmed}"`);
       continue;
     }
 
@@ -127,7 +128,7 @@ export function parseSchedule(input: string): ParsedTask[] {
     const endTime = parseTime(rangeMatch[3]);
 
     if (!startTime || !endTime) {
-      console.warn(`[ScheduleParser] Неверный формат времени в: "${trimmed}"`);
+      logger.warn(`[ScheduleParser] Неверный формат времени в: "${trimmed}"`);
       continue;
     }
 
@@ -179,7 +180,7 @@ export function parseSimpleSchedule(input: string): ParsedTask[] {
     );
 
     if (!match) {
-      console.warn(`[ScheduleParser] Не удалось распарсить строку: "${trimmed}"`);
+      logger.warn(`[ScheduleParser] Не удалось распарсить строку: "${trimmed}"`);
       continue;
     }
 
@@ -191,7 +192,7 @@ export function parseSimpleSchedule(input: string): ParsedTask[] {
     const endTime = parseTime(endTimeStr);
 
     if (!startTime || !endTime) {
-      console.warn(`[ScheduleParser] Неверный формат времени в: "${trimmed}"`);
+      logger.warn(`[ScheduleParser] Неверный формат времени в: "${trimmed}"`);
       continue;
     }
 

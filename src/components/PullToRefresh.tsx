@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, PanResponder } from 'react-native';
 import { SPACING, FONT_SIZES, useTheme } from '../constants/theme';
+import { logger } from '../utils/logger';
 
 interface PullToRefreshProps {
   onRefresh: () => Promise<void>;
@@ -50,7 +51,7 @@ export default function PullToRefresh({
     try {
       await onRefresh();
     } catch (error) {
-      console.error('[PullToRefresh] Error:', error);
+      logger.error('[PullToRefresh] Error:', error);
     } finally {
       setRefreshing(false);
     }

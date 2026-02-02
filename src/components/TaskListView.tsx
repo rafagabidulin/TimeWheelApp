@@ -66,7 +66,8 @@ export default function TaskListView({
             <TouchableOpacity
               style={[styles.taskItem, isCurrentTaskItem && styles.taskItemCurrent]}
               onPress={() => onEditTask(task.id)}
-              activeOpacity={0.7}>
+              activeOpacity={0.7}
+              testID={`task-item-${task.id}`}>
               <View style={[styles.taskColorBar, { backgroundColor: task.color }]} />
               <View style={styles.taskInfo}>
                 <Text
@@ -82,7 +83,8 @@ export default function TaskListView({
               <Text style={styles.taskDuration}>{duration}</Text>
               <TouchableOpacity
                 style={styles.taskDeleteButton}
-                onPress={() => onDeleteTask(task.id)}>
+                onPress={() => onDeleteTask(task.id)}
+                testID={`task-delete-${task.id}`}>
                 <Text style={styles.taskDeleteIcon}>✕</Text>
               </TouchableOpacity>
             </TouchableOpacity>

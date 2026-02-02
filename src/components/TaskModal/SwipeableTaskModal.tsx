@@ -204,6 +204,7 @@ export default function SwipeableTaskModal({
                 value={formData.title}
                 onChangeText={(text) => setFormData({ ...formData, title: text })}
                 maxLength={120}
+                testID="task-title-input"
               />
             </View>
 
@@ -271,7 +272,10 @@ export default function SwipeableTaskModal({
               <TouchableOpacity style={[styles.button, styles.cancelBtn]} onPress={onClose}>
                 <Text style={styles.cancelText}>Отмена</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.saveBtn]} onPress={handleSaveTask}>
+              <TouchableOpacity
+                style={[styles.button, styles.saveBtn]}
+                onPress={handleSaveTask}
+                testID="task-save">
                 <Text style={styles.saveText}>{isEditing ? 'Сохранить' : 'Добавить'}</Text>
               </TouchableOpacity>
             </View>

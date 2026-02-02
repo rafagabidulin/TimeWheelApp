@@ -99,6 +99,13 @@ export function parseDateISO(dateStr: string): Date | null {
   if (Number.isNaN(date.getTime())) {
     return null;
   }
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
   return date;
 }
 

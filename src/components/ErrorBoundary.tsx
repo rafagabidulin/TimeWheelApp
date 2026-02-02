@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { logger } from '../utils/logger';
 
 type ErrorBoundaryProps = {
   children: React.ReactNode;
@@ -19,7 +20,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
   }
 
   componentDidCatch(error: unknown, info: unknown) {
-    console.error('[ErrorBoundary] Unhandled error:', error, info);
+    logger.error('[ErrorBoundary] Unhandled error:', error, info);
   }
 
   render() {

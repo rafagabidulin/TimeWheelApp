@@ -2,6 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Day } from '../types/types';
 import { STORAGE_KEYS } from '../constants/theme';
+import { logger } from './logger';
 
 export class StorageError extends Error {
   constructor(message: string) {
@@ -22,14 +23,14 @@ export async function loadDaysFromStorage(): Promise<Day[]> {
         const parsed = JSON.parse(stored);
         return Array.isArray(parsed) ? parsed : [];
       } catch (parseError) {
-        console.warn('Storage parse error:', parseError);
+        logger.warn('Storage parse error:', parseError);
         await AsyncStorage.removeItem(STORAGE_KEYS.days);
         return [];
       }
     }
     return [];
   } catch (error) {
-    console.error('Storage load error:', error);
+    logger.error('Storage load error:', error);
     throw new StorageError('Не удалось загрузить данные из хранилища. Попробуйте позже.');
   }
 }
@@ -46,7 +47,7 @@ export async function saveDaysToStorage(days: Day[]): Promise<void> {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.days, payload);
     } catch (error) {
-      console.error('Storage save error:', error);
+      logger.error('Storage save error:', error);
       throw new StorageError('Не удалось сохранить данные. Изменения могут быть потеряны.');
     }
   });
@@ -62,7 +63,7 @@ export async function clearStorage(): Promise<void> {
   try {
     await AsyncStorage.removeItem(STORAGE_KEYS.days);
   } catch (error) {
-    console.error('Storage clear error:', error);
+    logger.error('Storage clear error:', error);
     throw new StorageError('Не удалось очистить хранилище.');
   }
 }

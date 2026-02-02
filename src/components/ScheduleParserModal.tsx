@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { parseSchedule, validateParsedTask, ParsedTask } from '../utils/scheduleParser';
 import { SPACING, FONT_SIZES, SIZES, useTheme } from '../constants/theme';
+import { logger } from '../utils/logger';
 
 interface ScheduleParserModalProps {
   visible: boolean;
@@ -65,7 +66,7 @@ export default function ScheduleParserModal({
       const validatedTasks = tasks.filter((task) => {
         const validation = validateParsedTask(task);
         if (!validation.valid) {
-          console.warn(`[Parser] Invalid task: ${task.title} - ${validation.error}`);
+          logger.warn(`[Parser] Invalid task: ${task.title} - ${validation.error}`);
         }
         return validation.valid;
       });
@@ -79,7 +80,7 @@ export default function ScheduleParserModal({
       setParsedTasks(validatedTasks);
       setShowPreview(true);
     } catch (error) {
-      console.error('[Parser] Error:', error);
+      logger.error('[Parser] Error:', error);
       Alert.alert('Ошибка', 'Ошибка при парсинге расписания');
     } finally {
       setLoading(false);
@@ -101,7 +102,7 @@ export default function ScheduleParserModal({
       Alert.alert('Успех', `Добавлено ${result.added} задач${skippedInfo}`);
       onClose();
     } catch (error) {
-      console.error('[Parser] Error adding tasks:', error);
+      logger.error('[Parser] Error adding tasks:', error);
       Alert.alert('Ошибка', 'Не удалось добавить задачи');
     } finally {
       setLoading(false);
@@ -145,6 +146,7 @@ export default function ScheduleParserModal({
                 numberOfLines={4}
                 editable={!loading}
                 maxLength={1000}
+                testID="schedule-input"
               />
 
               <View style={styles.buttons}>
@@ -159,7 +161,8 @@ export default function ScheduleParserModal({
                   style={[styles.button, styles.parseBtn]}
                   onPress={handleParse}
                   disabled={loading}
-                  activeOpacity={0.7}>
+                  activeOpacity={0.7}
+                  testID="schedule-parse">
                   {loading ? (
                     <ActivityIndicator color={colors.cardBackground} />
                   ) : (
@@ -196,7 +199,8 @@ export default function ScheduleParserModal({
                 <TouchableOpacity
                   style={[styles.button, styles.cancelBtn]}
                   onPress={() => setShowPreview(false)}
-                  disabled={loading}>
+                  disabled={loading}
+                  testID="schedule-back">
                   <Text style={styles.cancelText}>Назад</Text>
                 </TouchableOpacity>
 
@@ -204,7 +208,8 @@ export default function ScheduleParserModal({
                   style={[styles.button, styles.addBtn]}
                   onPress={handleAddTasks}
                   disabled={loading}
-                  activeOpacity={0.7}>
+                  activeOpacity={0.7}
+                  testID="schedule-add">
                   {loading ? (
                     <ActivityIndicator color={colors.cardBackground} />
                   ) : (

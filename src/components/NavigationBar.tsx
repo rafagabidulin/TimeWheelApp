@@ -47,7 +47,8 @@ export default function NavigationBar({
         style={[styles.navButton, !canGoPrev && styles.navButtonDisabled]}
         onPress={onPrevDay}
         disabled={!canGoPrev}
-        activeOpacity={0.7}>
+        activeOpacity={0.7}
+        testID="nav-prev">
         <Text style={styles.navButtonText}>‹</Text>
       </TouchableOpacity>
 
@@ -62,7 +63,8 @@ export default function NavigationBar({
         style={[styles.navButton, !canGoNext && styles.navButtonDisabled]}
         onPress={onNextDay}
         disabled={!canGoNext}
-        activeOpacity={0.7}>
+        activeOpacity={0.7}
+        testID="nav-next">
         <Text style={styles.navButtonText}>›</Text>
       </TouchableOpacity>
     </View>
