@@ -144,6 +144,7 @@ export default function ScheduleParserModal({
                 multiline
                 numberOfLines={4}
                 editable={!loading}
+                maxLength={1000}
               />
 
               <View style={styles.buttons}>

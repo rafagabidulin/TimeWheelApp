@@ -14,7 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { FormData, Day } from '../../types/types';
 import { SPACING, FONT_SIZES, SIZES, SCREEN, useTheme } from '../../constants/theme';
 import { COLOR_OPTIONS, CATEGORY_OPTIONS } from '../../constants/theme';
@@ -47,7 +47,7 @@ export default function SwipeableTaskModal({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const timePickerStyles = useMemo(() => createTimePickerStyles(colors), [colors]);
   const translateYRef = useRef(new Animated.Value(0)).current;
-  const panResponderRef = useRef<any>(null);
+  const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [startDate, setStartDate] = useState<Date>(new Date());
@@ -150,7 +150,7 @@ export default function SwipeableTaskModal({
   };
 
   // ⚠️ ВАЖНО: НЕ закрываем пикер при прокрутке - только обновляем значение
-  const handleStartTimeChange = (event: any, selectedDate?: Date) => {
+  const handleStartTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (selectedDate) {
       setStartDate(selectedDate);
       const hours = String(selectedDate.getHours()).padStart(2, '0');
@@ -161,7 +161,7 @@ export default function SwipeableTaskModal({
   };
 
   // ⚠️ ВАЖНО: НЕ закрываем пикер при прокрутке - только обновляем значение
-  const handleEndTimeChange = (event: any, selectedDate?: Date) => {
+  const handleEndTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (selectedDate) {
       setEndDate(selectedDate);
       const hours = String(selectedDate.getHours()).padStart(2, '0');
@@ -203,6 +203,7 @@ export default function SwipeableTaskModal({
                 placeholderTextColor={colors.textLight}
                 value={formData.title}
                 onChangeText={(text) => setFormData({ ...formData, title: text })}
+                maxLength={120}
               />
             </View>
 

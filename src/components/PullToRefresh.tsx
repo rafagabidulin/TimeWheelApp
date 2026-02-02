@@ -1,6 +1,6 @@
 // components/PullToRefresh.tsx
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, PanResponder, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, Animated, PanResponder } from 'react-native';
 import { SPACING, FONT_SIZES, useTheme } from '../constants/theme';
 
 interface PullToRefreshProps {
@@ -22,7 +22,7 @@ export default function PullToRefresh({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
-  const panResponderRef = useRef<any>(null);
+  const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
   const scrollOffsetRef = useRef(0);
 
   // Создаём PanResponder для обработки жестов

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Modal } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SPACING, FONT_SIZES, SIZES, useTheme } from '../../constants/theme';
 
 interface InlineTimePickerProps {
@@ -27,7 +27,7 @@ export default function InlineTimePicker({ onTimeSelect, initialTime }: InlineTi
     }
   }, [initialTime]);
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (selectedDate) {
       setDate(selectedDate);
       const hours = selectedDate.getHours();

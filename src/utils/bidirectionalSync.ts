@@ -15,7 +15,7 @@ const TIMEWHEEL_MARKER = 'TimeWheel App'; // Маркер для идентиф�
 /**
  * Преобразовать значение в Date если нужно
  */
-function ensureDate(value: any): Date | null {
+function ensureDate(value: unknown): Date | null {
   if (!value) return null;
 
   if (value instanceof Date) {
