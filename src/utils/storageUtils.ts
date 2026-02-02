@@ -18,7 +18,14 @@ export async function loadDaysFromStorage(): Promise<Day[]> {
   try {
     const stored = await AsyncStorage.getItem(STORAGE_KEYS.days);
     if (stored) {
-      return JSON.parse(stored);
+      try {
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (parseError) {
+        console.warn('Storage parse error:', parseError);
+        await AsyncStorage.removeItem(STORAGE_KEYS.days);
+        return [];
+      }
     }
     return [];
   } catch (error) {
@@ -31,13 +38,21 @@ export async function loadDaysFromStorage(): Promise<Day[]> {
  * Сохраняет дни с расписанием в AsyncStorage
  * @throws StorageError если сохранение не удалось
  */
+let saveQueue: Promise<void> = Promise.resolve();
+
 export async function saveDaysToStorage(days: Day[]): Promise<void> {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEYS.days, JSON.stringify(days));
-  } catch (error) {
-    console.error('Storage save error:', error);
-    throw new StorageError('Не удалось сохранить данные. Изменения могут быть потеряны.');
-  }
+  const payload = JSON.stringify(days);
+  const queuedSave = saveQueue.then(async () => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.days, payload);
+    } catch (error) {
+      console.error('Storage save error:', error);
+      throw new StorageError('Не удалось сохранить данные. Изменения могут быть потеряны.');
+    }
+  });
+
+  saveQueue = queuedSave.catch(() => {});
+  return queuedSave;
 }
 
 /**

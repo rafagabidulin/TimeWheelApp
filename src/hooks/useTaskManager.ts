@@ -37,8 +37,10 @@ export function useTaskManager() {
 
   const calendarInitializedRef = useRef(false);
   const calendarCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const calendarSyncInProgressRef = useRef(false);
+  const calendarSyncQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [lastCalendarCheckRef] = useState(() => ({ time: Date.now() }));
+  const daysRef = useRef<Day[]>(days);
+  const selectedDateRef = useRef(selectedDate);
 
   // ============================================================================
   // ВЫЧИСЛЯЕМЫЕ ЗНАЧЕНИЯ
@@ -219,6 +221,14 @@ export function useTaskManager() {
       setDays(mockDays);
     }
   }, []);
+
+  useEffect(() => {
+    daysRef.current = days;
+  }, [days]);
+
+  useEffect(() => {
+    selectedDateRef.current = selectedDate;
+  }, [selectedDate]);
 
   const applyImportedTasksToDay = useCallback((day: Day, importedTasks: Task[]): Day => {
     const normalized = importedTasks.map((task) => ({
@@ -437,57 +447,59 @@ export function useTaskManager() {
     async (taskId: string, formData: FormData, options?: { allowOverlap?: boolean }) => {
       validateTask(formData, taskId, options?.allowOverlap);
 
-      const updatedDays = days.map((day) => {
-        if (day.date !== selectedDate) return day;
+      let updatedDays: Day[] = [];
+      setDays((prevDays) => {
+        updatedDays = prevDays.map((day) => {
+          if (day.date !== selectedDate) return day;
 
-        return {
-          ...day,
-          tasks: day.tasks.map((task) =>
-            task.id === taskId
-              ? {
-                  ...task,
-                  title: formData.title,
-                  startTime: formData.startTime,
-                  endTime: formData.endTime,
-                  category: formData.category,
-                  color: formData.color,
-                }
-              : task,
-          ),
-        };
+          return {
+            ...day,
+            tasks: day.tasks.map((task) =>
+              task.id === taskId
+                ? {
+                    ...task,
+                    title: formData.title,
+                    startTime: formData.startTime,
+                    endTime: formData.endTime,
+                    category: formData.category,
+                    color: formData.color,
+                  }
+                : task,
+            ),
+          };
+        });
+
+        return updatedDays;
       });
 
       await saveDaysToStorage(updatedDays);
-      setDays(updatedDays);
     },
-    [days, selectedDate, validateTask],
+    [selectedDate, validateTask],
   );
 
   const deleteTask = useCallback(
     async (taskId: string) => {
-      const updatedDays = days.map((day) =>
-        day.date === selectedDate
-          ? {
-              ...day,
-              tasks: day.tasks.filter((t) => t.id !== taskId),
-            }
-          : day,
-      );
+      let updatedDays: Day[] = [];
+      setDays((prevDays) => {
+        updatedDays = prevDays.map((day) =>
+          day.date === selectedDate
+            ? {
+                ...day,
+                tasks: day.tasks.filter((t) => t.id !== taskId),
+              }
+            : day,
+        );
+
+        return updatedDays;
+      });
 
       await saveDaysToStorage(updatedDays);
-      setDays(updatedDays);
-
     },
-    [days, selectedDate],
+    [selectedDate],
   );
 
-  const syncSelectedDayFromCalendar = useCallback(
+  const runCalendarSync = useCallback(
     async (reason: 'interval' | 'day-change') => {
-      if (calendarSyncInProgressRef.current) {
-        return;
-      }
-
-      calendarSyncInProgressRef.current = true;
       try {
         const calendarSync = await initializeCalendarSync();
         if (!calendarSync.calendarId || !calendarSync.hasPermission) {
@@ -502,23 +514,30 @@ export function useTaskManager() {
           lastCalendarCheckRef.time = Date.now();
         }
 
+        const dateToSync = selectedDateRef.current;
+        const dayForDate = daysRef.current.find((day) => day.date === dateToSync);
+        if (!dayForDate) {
+          return;
+        }
+
+        const dayDate = parseDateISO(dateToSync) || new Date(dateToSync);
         const importedTasks = await importCalendarEventsToDay(
           calendarSync.calendarId,
-          selectedDateForCalendar,
+          dayDate,
         );
 
         const cleanedTasks = await removeTaskIfDeletedFromCalendar(
-          currentDay.tasks,
+          dayForDate.tasks,
           calendarSync.calendarId,
         );
 
-        if (importedTasks.length === 0 && cleanedTasks.length === currentDay.tasks.length) {
+        if (importedTasks.length === 0 && cleanedTasks.length === dayForDate.tasks.length) {
           return;
         }
 
         setDays((prevDays) => {
           const updatedDays = prevDays.map((day) => {
-            if (day.date !== selectedDate) {
+            if (day.date !== dateToSync) {
               return day;
             }
 
@@ -536,16 +555,18 @@ export function useTaskManager() {
         });
       } catch (error) {
         console.warn('[useTaskManager] Calendar sync error:', error);
-      } finally {
-        calendarSyncInProgressRef.current = false;
       }
     },
-    [
-      applyImportedTasksToDay,
-      currentDay.tasks,
-      selectedDate,
-      selectedDateForCalendar,
-    ],
+    [applyImportedTasksToDay],
+  );
+
+  const syncSelectedDayFromCalendar = useCallback(
+    async (reason: 'interval' | 'day-change') => {
+      const queued = calendarSyncQueueRef.current.then(() => runCalendarSync(reason));
+      calendarSyncQueueRef.current = queued.catch(() => {});
+      await queued;
+    },
+    [runCalendarSync],
   );
 
   // ============================================================================

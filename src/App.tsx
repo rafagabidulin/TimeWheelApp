@@ -30,6 +30,7 @@ import ScheduleParserModal from './components/ScheduleParserModal';
 import StorageErrorBanner from './components/StorageErrorBanner';
 import StatsBar from './components/StatsBar';
 import PullToRefresh from './components/PullToRefresh';
+import ErrorBoundary from './components/ErrorBoundary';
 import { initializeCalendarSync, getOrCreateTimeWheelCalendar } from './utils/calendarSync';
 import { syncCalendarToDays } from './utils/bidirectionalSync';
 
@@ -470,9 +471,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
