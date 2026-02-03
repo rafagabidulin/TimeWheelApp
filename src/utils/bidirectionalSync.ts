@@ -21,6 +21,9 @@ function ensureDate(value: unknown): Date | null {
   if (!value) return null;
 
   if (value instanceof Date) {
+    if (isNaN(value.getTime())) {
+      return null;
+    }
     return value;
   }
 
@@ -32,10 +35,21 @@ function ensureDate(value: unknown): Date | null {
   }
 
   if (typeof value === 'number') {
-    return new Date(value);
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+    return null;
   }
 
   return null;
+}
+
+function isReasonableDate(date: Date): boolean {
+  const min = new Date(2000, 0, 1).getTime();
+  const max = new Date(2100, 0, 1).getTime();
+  const time = date.getTime();
+  return time >= min && time <= max;
 }
 
 /**
@@ -73,7 +87,11 @@ export async function importCalendarEventsToDay(calendarId: string, date: Date):
 
         // Пропускаем события без времени
         if (!startDate || !endDate) {
-        logger.warn('[BidirectionalSync] Event has no valid dates:', event.title);
+          logger.warn('[BidirectionalSync] Event has no valid dates:', event.title);
+          continue;
+        }
+        if (!isReasonableDate(startDate) || !isReasonableDate(endDate)) {
+          logger.warn('[BidirectionalSync] Event has unreasonable dates:', event.title);
           continue;
         }
 
@@ -199,6 +217,10 @@ export async function syncCalendarToDays(days: Day[], calendarId: string): Promi
 
         if (!startDate || !endDate) {
           logger.warn('[BidirectionalSync] Event has no valid dates:', event.title);
+          continue;
+        }
+        if (!isReasonableDate(startDate) || !isReasonableDate(endDate)) {
+          logger.warn('[BidirectionalSync] Event has unreasonable dates:', event.title);
           continue;
         }
 

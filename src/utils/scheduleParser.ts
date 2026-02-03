@@ -26,6 +26,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   custom: '#2196F3',
 };
 
+const MAX_SCHEDULE_INPUT_LENGTH = 1000;
+const MAX_SCHEDULE_ENTRIES = 200;
+
 /**
  * Определение категории по названию задачи
  */
@@ -99,7 +102,17 @@ export function parseSchedule(input: string): ParsedTask[] {
   const tasks: ParsedTask[] = [];
 
   // Разделяем по запятым, точкам с запятой и переводам строк
-  const entries = input.split(/[,;\n]+/);
+  let safeInput = input;
+  if (safeInput.length > MAX_SCHEDULE_INPUT_LENGTH) {
+    logger.warn('[ScheduleParser] Input too long, truncating');
+    safeInput = safeInput.slice(0, MAX_SCHEDULE_INPUT_LENGTH);
+  }
+
+  let entries = safeInput.split(/[,;\n]+/);
+  if (entries.length > MAX_SCHEDULE_ENTRIES) {
+    logger.warn('[ScheduleParser] Too many entries, truncating');
+    entries = entries.slice(0, MAX_SCHEDULE_ENTRIES);
+  }
 
   for (const entry of entries) {
     const trimmed = entry.trim();
@@ -166,7 +179,17 @@ export function parseSchedule(input: string): ParsedTask[] {
  * "Обед: 13:00-14:00"
  */
 export function parseSimpleSchedule(input: string): ParsedTask[] {
-  const lines = input.split('\n');
+  let safeInput = input;
+  if (safeInput.length > MAX_SCHEDULE_INPUT_LENGTH) {
+    logger.warn('[ScheduleParser] Input too long, truncating');
+    safeInput = safeInput.slice(0, MAX_SCHEDULE_INPUT_LENGTH);
+  }
+
+  let lines = safeInput.split('\n');
+  if (lines.length > MAX_SCHEDULE_ENTRIES) {
+    logger.warn('[ScheduleParser] Too many lines, truncating');
+    lines = lines.slice(0, MAX_SCHEDULE_ENTRIES);
+  }
   const tasks: ParsedTask[] = [];
 
   for (const line of lines) {

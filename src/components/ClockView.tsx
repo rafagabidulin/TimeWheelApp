@@ -1,9 +1,9 @@
 // components/ClockView.tsx
-import React, { useMemo } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import React, { useMemo, memo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path, Text as SvgText, Line } from 'react-native-svg';
 import { Task, Day } from '../types/types';
-import { getAngle, getAngleRadians, getPathData, timeToHours } from '../utils/timeUtils';
+import { getAngle, getPathData, timeToHours } from '../utils/timeUtils';
 import {
   CLOCK_RADIUS,
   CENTER_X,
@@ -11,7 +11,6 @@ import {
   SVG_SIZE,
   SPACING,
   FONT_SIZES,
-  ANGLE_TOP,
   useTheme,
 } from '../constants/theme';
 
@@ -32,7 +31,7 @@ interface ClockViewProps {
  * - Отдельный Path для текущей стрелки времени
  * - Минимальное количество вычислений в рендере
  */
-export default function ClockView({
+export default memo(function ClockView({
   currentTime,
   selectedDate,
   currentDay,
@@ -79,6 +78,107 @@ export default function ClockView({
     });
   }, [tasks]);
 
+  const hourLabels = useMemo(() => {
+    return Array.from({ length: 24 }, (_, i) => {
+      const angle = (i / 24) * 360 - 90;
+      const rad = angle * (Math.PI / 180);
+      const x = CENTER_X + (CLOCK_RADIUS - 35) * Math.cos(rad);
+      const y = CENTER_Y + (CLOCK_RADIUS - 35) * Math.sin(rad);
+
+      return (
+        <SvgText
+          key={`hour-${i}`}
+          x={x}
+          y={y}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize={FONT_SIZES.xs}
+          fontWeight="bold"
+          fill={colors.textPrimary}>
+          {String(i).padStart(2, '0')}
+        </SvgText>
+      );
+    });
+  }, [colors.textPrimary]);
+
+  const innerTicks = useMemo(() => {
+    return Array.from({ length: 24 }, (_, i) => {
+      const angle = (i / 24) * 360 - 90;
+      const rad = angle * (Math.PI / 180);
+      const innerRadius = 45;
+      const outerRadius = CLOCK_RADIUS - 47;
+      const x1 = CENTER_X + innerRadius * Math.cos(rad);
+      const y1 = CENTER_Y + innerRadius * Math.sin(rad);
+      const x2 = CENTER_X + outerRadius * Math.cos(rad);
+      const y2 = CENTER_Y + outerRadius * Math.sin(rad);
+
+      return (
+        <Line
+          key={`tick-${i}`}
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+          stroke={colors.textSecondary}
+          strokeWidth={1}
+          opacity={0.25}
+        />
+      );
+    });
+  }, [colors.textSecondary]);
+
+  const innerEdgeTicks = useMemo(() => {
+    return Array.from({ length: 24 }, (_, i) => {
+      const angle = (i / 24) * 360 - 90;
+      const rad = angle * (Math.PI / 180);
+      const innerRadius = CLOCK_RADIUS - 10;
+      const outerRadius = CLOCK_RADIUS;
+      const x1 = CENTER_X + innerRadius * Math.cos(rad);
+      const y1 = CENTER_Y + innerRadius * Math.sin(rad);
+      const x2 = CENTER_X + outerRadius * Math.cos(rad);
+      const y2 = CENTER_Y + outerRadius * Math.sin(rad);
+
+      return (
+        <Line
+          key={`outer-tick-in-${i}`}
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+          stroke={colors.textSecondary}
+          strokeWidth={1}
+          opacity={0.25}
+        />
+      );
+    });
+  }, [colors.textSecondary]);
+
+  const outerEdgeTicks = useMemo(() => {
+    return Array.from({ length: 24 }, (_, i) => {
+      const angle = (i / 24) * 360 - 90;
+      const rad = angle * (Math.PI / 180);
+      const innerRadius = CLOCK_RADIUS;
+      const outerRadius = CLOCK_RADIUS + 10;
+      const x1 = CENTER_X + innerRadius * Math.cos(rad);
+      const y1 = CENTER_Y + innerRadius * Math.sin(rad);
+      const x2 = CENTER_X + outerRadius * Math.cos(rad);
+      const y2 = CENTER_Y + outerRadius * Math.sin(rad);
+
+      return (
+        <Line
+          key={`outer-tick-out-${i}`}
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+          stroke={colors.textSecondary}
+          strokeWidth={1}
+          opacity={0.25}
+        />
+      );
+    });
+  }, [colors.textSecondary]);
+
   const formattedTime = currentTime.toLocaleTimeString('ru-RU', {
     hour: '2-digit',
     minute: '2-digit',
@@ -101,101 +201,16 @@ export default function ClockView({
           />
 
           {/* ЧАСОВЫЕ МЕТКИ (0-23) */}
-          {Array.from({ length: 24 }, (_, i) => {
-            const angle = (i / 24) * 360 - 90;
-            const rad = angle * (Math.PI / 180);
-            const x = CENTER_X + (CLOCK_RADIUS - 35) * Math.cos(rad);
-            const y = CENTER_Y + (CLOCK_RADIUS - 35) * Math.sin(rad);
-
-            return (
-              <SvgText
-                key={`hour-${i}`}
-                x={x}
-                y={y}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={FONT_SIZES.xs}
-                fontWeight="bold"
-                fill={colors.textPrimary}>
-                {String(i).padStart(2, '0')}
-              </SvgText>
-            );
-          })}
+          {hourLabels}
 
           {/* ТОНКИЕ МЕТКИ ЧАСОВ ОТ ЦЕНТРАЛЬНОГО КРУГА */}
-          {Array.from({ length: 24 }, (_, i) => {
-            const angle = (i / 24) * 360 - 90;
-            const rad = angle * (Math.PI / 180);
-            const innerRadius = 45;
-            const outerRadius = CLOCK_RADIUS - 47;
-            const x1 = CENTER_X + innerRadius * Math.cos(rad);
-            const y1 = CENTER_Y + innerRadius * Math.sin(rad);
-            const x2 = CENTER_X + outerRadius * Math.cos(rad);
-            const y2 = CENTER_Y + outerRadius * Math.sin(rad);
-
-            return (
-              <Line
-                key={`tick-${i}`}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke={colors.textSecondary}
-                strokeWidth={1}
-                opacity={0.25}
-              />
-            );
-          })}
+          {innerTicks}
 
           {/* КОРОТКИЕ МЕТКИ ОТ ГРАНИЦЫ ЦИФЕРБЛАТА ВНУТРЬ */}
-          {Array.from({ length: 24 }, (_, i) => {
-            const angle = (i / 24) * 360 - 90;
-            const rad = angle * (Math.PI / 180);
-            const innerRadius = CLOCK_RADIUS - 10;
-            const outerRadius = CLOCK_RADIUS;
-            const x1 = CENTER_X + innerRadius * Math.cos(rad);
-            const y1 = CENTER_Y + innerRadius * Math.sin(rad);
-            const x2 = CENTER_X + outerRadius * Math.cos(rad);
-            const y2 = CENTER_Y + outerRadius * Math.sin(rad);
-
-            return (
-              <Line
-                key={`outer-tick-in-${i}`}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke={colors.textSecondary}
-                strokeWidth={1}
-                opacity={0.25}
-              />
-            );
-          })}
+          {innerEdgeTicks}
 
           {/* КОРОТКИЕ МЕТКИ С НАРУЖНОЙ СТОРОНЫ */}
-          {Array.from({ length: 24 }, (_, i) => {
-            const angle = (i / 24) * 360 - 90;
-            const rad = angle * (Math.PI / 180);
-            const innerRadius = CLOCK_RADIUS;
-            const outerRadius = CLOCK_RADIUS + 10;
-            const x1 = CENTER_X + innerRadius * Math.cos(rad);
-            const y1 = CENTER_Y + innerRadius * Math.sin(rad);
-            const x2 = CENTER_X + outerRadius * Math.cos(rad);
-            const y2 = CENTER_Y + outerRadius * Math.sin(rad);
-
-            return (
-              <Line
-                key={`outer-tick-out-${i}`}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke={colors.textSecondary}
-                strokeWidth={1}
-                opacity={0.25}
-              />
-            );
-          })}
+          {outerEdgeTicks}
 
           {/* ЗАДАЧИ НА ЦИФЕРБЛАТЕ */}
           {tasks.map((task, index) => {
@@ -297,7 +312,7 @@ export default function ClockView({
       </View>
     </View>
   );
-}
+});
 
 const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({

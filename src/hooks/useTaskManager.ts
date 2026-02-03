@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
+import { v4 as uuidv4 } from 'uuid';
 import { Day, Task, FormData } from '../types/types';
 import { mockDays } from '../utils/mockData';
 import { loadDaysFromStorage, saveDaysToStorage, StorageError } from '../utils/storageUtils';
@@ -22,7 +24,7 @@ import { WEEKLY_TEMPLATE, buildTasksForDate } from '../utils/templates';
 import { logger } from '../utils/logger';
 
 export function useTaskManager() {
-  const CALENDAR_SYNC_INTERVAL_MS = 15000;
+  const CALENDAR_SYNC_INTERVAL_MS = 60000;
   // ============================================================================
   // STATE
   // ============================================================================
@@ -30,7 +32,7 @@ export function useTaskManager() {
   const [days, setDays] = useState<Day[]>(mockDays);
   const [selectedDate, setSelectedDate] = useState<string>(formatDateISO(new Date()));
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [appState, setAppState] = useState('active');
+  const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
   const [storageError, setStorageError] = useState<string | null>(null);
 
   // ============================================================================
@@ -347,7 +349,7 @@ export function useTaskManager() {
       validateTask(formData, undefined, options?.allowOverlap);
 
       const newTask: Task = {
-        id: `task-${Date.now()}`,
+        id: `task-${uuidv4()}`,
         title: formData.title,
         startTime: formData.startTime,
         endTime: formData.endTime,
@@ -575,6 +577,18 @@ export function useTaskManager() {
     };
   }, [loadDaysFromStorageWrapper]);
 
+  // Отслеживаем состояние приложения, чтобы не синхронизировать в фоне
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      setAppState(nextState);
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   // Обновление текущего времени
   useEffect(() => {
     const timer = setInterval(() => {
@@ -584,14 +598,16 @@ export function useTaskManager() {
     return () => clearInterval(timer);
   }, []);
 
-  // Периодическая проверка календаря (каждые 15 сек)
+  // Периодическая проверка календаря (каждую минуту)
   useEffect(() => {
     if (!calendarInitializedRef.current) {
       return;
     }
 
     calendarCheckIntervalRef.current = setInterval(async () => {
-      await syncSelectedDayFromCalendar('interval');
+      if (appState === 'active') {
+        await syncSelectedDayFromCalendar('interval');
+      }
     }, CALENDAR_SYNC_INTERVAL_MS);
 
     return () => {
@@ -599,7 +615,14 @@ export function useTaskManager() {
         clearInterval(calendarCheckIntervalRef.current);
       }
     };
-  }, [syncSelectedDayFromCalendar]);
+  }, [appState, syncSelectedDayFromCalendar]);
+
+  // При возвращении в активное состояние синхронизируем сразу
+  useEffect(() => {
+    if (appState === 'active' && calendarInitializedRef.current) {
+      syncSelectedDayFromCalendar('interval');
+    }
+  }, [appState, syncSelectedDayFromCalendar]);
 
   // Синхро при смене дня
   useEffect(() => {
