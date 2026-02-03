@@ -4,7 +4,6 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   TouchableOpacity,
   Text,
   FlatList,
@@ -14,6 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTaskManager } from './hooks/useTaskManager';
 import { SPACING, FONT_SIZES, ThemeProvider, useTheme, CLOCK_RADIUS, CENTER_Y } from './constants/theme';
@@ -46,6 +46,7 @@ import { syncCalendarToDays } from './utils/bidirectionalSync';
 function AppContent() {
   const { colors, scheme, toggleTheme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
   const iconSize = 28;
   // ============================================================================
   // УПРАВЛЕНИЕ СОСТОЯНИЕМ ЗАДАЧ (весь бизнес-логика в хуке)
@@ -433,7 +434,7 @@ function AppContent() {
   // ============================================================================
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]} edges={[]}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         {/* FlatList ВМЕСТО ScrollView — ДЛЯ СОВМЕСТИМОСТИ С ВЛОЖЕННЫМИ FlatList */}
         <FlatList
@@ -472,9 +473,11 @@ function AppContent() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 }
@@ -584,7 +587,7 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     borderColor: colors.border,
   },
   bottomSection: {
-    marginTop: -SPACING.xxl,
+    marginTop: -SPACING.xxl - 40,
   },
   themeToggleRow: {
     width: '90%',

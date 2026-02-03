@@ -102,6 +102,8 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     marginBottom: SPACING.lg,
     backgroundColor: colors.cardBackground,
     borderRadius: SIZES.borderRadius,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     overflow: 'hidden',
   },
   emptyContainer: {
@@ -126,6 +128,8 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     paddingVertical: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   taskItemCurrent: {
     backgroundColor: colors.currentDayHighlight,

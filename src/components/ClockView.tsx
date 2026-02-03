@@ -79,11 +79,12 @@ export default memo(function ClockView({
   }, [tasks]);
 
   const hourLabels = useMemo(() => {
+    const labelRadius = CLOCK_RADIUS - 28;
     return Array.from({ length: 24 }, (_, i) => {
       const angle = (i / 24) * 360 - 90;
       const rad = angle * (Math.PI / 180);
-      const x = CENTER_X + (CLOCK_RADIUS - 35) * Math.cos(rad);
-      const y = CENTER_Y + (CLOCK_RADIUS - 35) * Math.sin(rad);
+      const x = CENTER_X + labelRadius * Math.cos(rad);
+      const y = CENTER_Y + labelRadius * Math.sin(rad);
 
       return (
         <SvgText
@@ -92,6 +93,7 @@ export default memo(function ClockView({
           y={y}
           textAnchor="middle"
           dominantBaseline="middle"
+          alignmentBaseline="middle"
           fontSize={FONT_SIZES.xs}
           fontWeight="bold"
           fill={colors.textPrimary}>
@@ -270,6 +272,7 @@ export default memo(function ClockView({
                 CENTER_X + (CLOCK_RADIUS - 20) * Math.cos(angleRad)
               } ${CENTER_Y + (CLOCK_RADIUS - 20) * Math.sin(angleRad)}`}
               stroke={colors.primary}
+              opacity={0.8}
               strokeWidth="4"
               strokeLinecap="round"
             />
@@ -288,8 +291,10 @@ export default memo(function ClockView({
           {/* ВРЕМЯ В ЦЕНТРЕ */}
           <SvgText
             x={CENTER_X}
-            y={CENTER_Y - 8}
+            y={CENTER_Y - 4}
             textAnchor="middle"
+            dominantBaseline="middle"
+            alignmentBaseline="middle"
             fontSize={FONT_SIZES.xl}
             fontWeight="bold"
             fill={colors.textPrimary}
@@ -302,6 +307,8 @@ export default memo(function ClockView({
             x={CENTER_X}
             y={CENTER_Y + 12}
             textAnchor="middle"
+            dominantBaseline="middle"
+            alignmentBaseline="middle"
             fontSize={FONT_SIZES.xs}
             fontWeight="bold"
             fill={colors.textSecondary}

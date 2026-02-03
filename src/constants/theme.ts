@@ -11,17 +11,17 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 /** Радиус циферблата — 35% от ширины экрана для оптимального отображения */
 export const CLOCK_RADIUS = SCREEN_WIDTH * 0.35;
 
-/** Смещение циферблата вниз для балансировки с заголовком */
-export const CLOCK_CENTER_OFFSET = 0;
-
-/** Центр X координата циферблата */
-export const CENTER_X = SCREEN_WIDTH / 2;
-
-/** Центр Y координата циферблата (с учётом смещения) */
-export const CENTER_Y = SCREEN_WIDTH / 2 + CLOCK_CENTER_OFFSET;
+/** Смещение циферблата вниз/вверх для балансировки с заголовком */
+export const CLOCK_CENTER_OFFSET = -40;
 
 /** SVG высота и ширина */
 export const SVG_SIZE = 400;
+
+/** Центр X координата циферблата */
+export const CENTER_X = SVG_SIZE / 2;
+
+/** Центр Y координата циферблата (с учётом смещения) */
+export const CENTER_Y = SVG_SIZE / 2 + CLOCK_CENTER_OFFSET;
 
 // ============================================================================
 // УГЛЫ (В РАДИАНАХ И ГРАДУСАХ)
