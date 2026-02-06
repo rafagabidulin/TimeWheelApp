@@ -3,6 +3,7 @@ import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { Day } from '../types/types';
 import { SPACING, FONT_SIZES, SIZES, useTheme } from '../constants/theme';
 import { parseDateISO } from '../utils/timeUtils';
+import { formatShortDate } from '../i18n';
 
 
 interface NavigationBarProps {
@@ -27,17 +28,9 @@ export default function NavigationBar({
 }: NavigationBarProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const getMonthName = (month: number): string => {
-    const months = [
-      'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн',
-      'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек',
-    ];
-    return months[month - 1] || '';
-  };
-
   const parsedDate = parseDateISO(currentDay.date);
   const dateLabel = parsedDate
-    ? `${parsedDate.getDate()} ${getMonthName(parsedDate.getMonth() + 1)}`
+    ? formatShortDate(parsedDate)
     : currentDay.date;
 
   return (

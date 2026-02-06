@@ -2,11 +2,12 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import NavigationBar from '../NavigationBar';
 import { Day } from '../../types/types';
+import { formatShortDate, getDayLabel } from '../../i18n';
 
 describe('NavigationBar', () => {
   const currentDay: Day = {
     id: 'sunday',
-    name: 'Вс',
+    name: getDayLabel('sunday'),
     date: '2025-01-05',
     tasks: [],
   };
@@ -25,8 +26,8 @@ describe('NavigationBar', () => {
       />,
     );
 
-    expect(getByText('Вс')).toBeTruthy();
-    expect(getByText('5 Янв')).toBeTruthy();
+    expect(getByText(getDayLabel('sunday'))).toBeTruthy();
+    expect(getByText(formatShortDate(new Date(2025, 0, 5)))).toBeTruthy();
 
     fireEvent.press(getByTestId('nav-prev'));
     fireEvent.press(getByTestId('nav-next'));

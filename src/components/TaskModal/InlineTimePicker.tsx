@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Modal } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useTranslation } from 'react-i18next';
 import { SPACING, FONT_SIZES, SIZES, useTheme } from '../../constants/theme';
 
 interface InlineTimePickerProps {
@@ -10,6 +11,7 @@ interface InlineTimePickerProps {
 
 export default function InlineTimePicker({ onTimeSelect, initialTime }: InlineTimePickerProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [date, setDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState(false);
@@ -67,7 +69,7 @@ export default function InlineTimePicker({ onTimeSelect, initialTime }: InlineTi
 
             <View style={styles.pickerContainer}>
               <View style={styles.pickerHeader}>
-                <Text style={styles.pickerTitle}>Выбрать время</Text>
+                <Text style={styles.pickerTitle}>{t('timePicker.selectTimeTitle')}</Text>
               </View>
 
               {/* NATIVE iOS TIME PICKER */}
@@ -85,7 +87,7 @@ export default function InlineTimePicker({ onTimeSelect, initialTime }: InlineTi
                 style={styles.closeButton}
                 onPress={() => setShowPicker(false)}
                 activeOpacity={0.7}>
-                <Text style={styles.closeButtonText}>Готово</Text>
+                <Text style={styles.closeButtonText}>{t('common.done')}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -3,6 +3,7 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import SwipeableTaskModal from '../TaskModal/SwipeableTaskModal';
 import { Day, FormData } from '../../types/types';
+import { getDayLabel } from '../../i18n';
 
 jest.mock('@react-native-community/datetimepicker', () => {
   const React = require('react');
@@ -14,7 +15,7 @@ jest.mock('@react-native-community/datetimepicker', () => {
 describe('SwipeableTaskModal', () => {
   const currentDay: Day = {
     id: 'monday',
-    name: 'Пн',
+    name: getDayLabel('monday'),
     date: '2025-01-05',
     tasks: [],
   };

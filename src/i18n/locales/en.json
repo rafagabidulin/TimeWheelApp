@@ -1,0 +1,125 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "add": "Add",
+    "save": "Save",
+    "close": "Close",
+    "back": "Back",
+    "done": "Done",
+    "skip": "Skip",
+    "error": "Error",
+    "success": "Success"
+  },
+  "ui": {
+    "addTask": "+ Add task",
+    "addSchedule": "📋 Add schedule",
+    "applyWeeklyTemplate": "📅 Apply weekly template",
+    "lightTheme": "☀️ Light theme",
+    "darkTheme": "🌙 Dark theme"
+  },
+  "alerts": {
+    "taskConflictTitle": "Task conflict",
+    "taskConflictMessage": "Task \"{{title}}\" overlaps with an existing one. Add anyway?",
+    "taskOverlapAdjustMessage": "Task overlaps with an existing one. Add and adjust the old task?",
+    "templateTitle": "Template",
+    "templateAllFilled": "All weekdays are already filled.",
+    "templateApplied": "Templates applied to {{count}} days.",
+    "templateError": "Failed to apply weekly template."
+  },
+  "errors": {
+    "storageDecrypt": "Failed to decrypt data.",
+    "storageLoad": "Failed to load data from storage. Please try again.",
+    "storageSave": "Failed to save data. Changes may be lost.",
+    "storageClear": "Failed to clear storage.",
+    "taskTitleRequired": "Enter a task title",
+    "taskTimeInvalid": "Enter a valid time",
+    "taskOverlap": "Task overlaps with an existing one",
+    "taskSaveFailed": "Failed to save task"
+  },
+  "time": {
+    "hoursShort": "h",
+    "minutesShort": "min"
+  },
+  "days": {
+    "mondayShort": "Mon",
+    "tuesdayShort": "Tue",
+    "wednesdayShort": "Wed",
+    "thursdayShort": "Thu",
+    "fridayShort": "Fri",
+    "saturdayShort": "Sat",
+    "sundayShort": "Sun"
+  },
+  "categories": {
+    "work": "Work",
+    "food": "Food",
+    "sports": "Sports",
+    "study": "Study",
+    "home": "Home",
+    "leisure": "Leisure",
+    "custom": "Custom"
+  },
+  "parser": {
+    "title": "Add schedule",
+    "hint": "Enter schedule in format: \"Title 9:00-13:00, title 13:00-14:00\"",
+    "placeholder": "Work 9:00-13:00, lunch 13:00-14:00, workout 19:00-20:00",
+    "parse": "Parse",
+    "previewTitle": "Review schedule",
+    "foundCount": "{{count}} tasks found",
+    "inputRequired": "Enter a schedule",
+    "parseFailedHint": "Failed to parse schedule. Try format: \"Title 9:00-13:00\"",
+    "allInvalid": "All tasks contain errors. Check the time format.",
+    "parseError": "Error while parsing schedule",
+    "addFailed": "Failed to add tasks",
+    "addedSummary": "Added {{count}} tasks{{skippedInfo}}",
+    "skippedConflicts": ", skipped {{count}} due to conflicts",
+    "addAll": "Add all"
+  },
+  "taskModal": {
+    "editTitle": "Edit task",
+    "addTitle": "Add task",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Enter title",
+    "timeLabel": "Time",
+    "categoryLabel": "Category",
+    "colorLabel": "Color",
+    "startTimeTitle": "Start time",
+    "endTimeTitle": "End time"
+  },
+  "timePicker": {
+    "selectTimeTitle": "Select time"
+  },
+  "stats": {
+    "load": "Load: {{percent}}%",
+    "nextTask": "⏰ Next: {{title}} {{time}}",
+    "allDone": "✅ All tasks completed",
+    "viewPlan": "📅 View the plan for this day"
+  },
+  "pullToRefresh": {
+    "syncing": "⟳ Syncing...",
+    "pull": "⬇ Pull to refresh ({{px}}px)"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "subtitle": "Please restart the app."
+  },
+  "tasks": {
+    "empty": "No tasks for this day"
+  },
+  "events": {
+    "defaultTitle": "Event"
+  },
+  "templates": {
+    "breakfast": "Breakfast",
+    "work": "Work",
+    "lunch": "Lunch",
+    "project": "Project",
+    "workout": "Workout",
+    "meeting": "Meeting",
+    "study": "Study",
+    "presentation": "Presentation",
+    "chores": "Chores",
+    "friends": "Friends",
+    "rest": "Rest"
+  }
+}

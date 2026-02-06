@@ -2,6 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import StatsBar from '../StatsBar';
 import { Task } from '../../types/types';
+import i18n from '../../i18n';
 
 describe('StatsBar', () => {
   const nextTask: Task = {
@@ -19,8 +20,8 @@ describe('StatsBar', () => {
       <StatsBar loadPercent={25} nextTask={nextTask} isCurrentDay={true} />,
     );
 
-    expect(getByText('Загрузка: 25%')).toBeTruthy();
-    expect(getByText('⏰ Следующая: Встреча 10:00')).toBeTruthy();
+    expect(getByText(i18n.t('stats.load', { percent: 25 }))).toBeTruthy();
+    expect(getByText(i18n.t('stats.nextTask', { title: 'Встреча', time: '10:00' }))).toBeTruthy();
   });
 
   it('shows completed message when no next task', () => {
@@ -28,7 +29,7 @@ describe('StatsBar', () => {
       <StatsBar loadPercent={80} nextTask={undefined} isCurrentDay={true} />,
     );
 
-    expect(getByText('✅ Все задачи завершены')).toBeTruthy();
+    expect(getByText(i18n.t('stats.allDone'))).toBeTruthy();
   });
 
   it('shows non-current day message', () => {
@@ -36,6 +37,6 @@ describe('StatsBar', () => {
       <StatsBar loadPercent={10} nextTask={nextTask} isCurrentDay={false} />,
     );
 
-    expect(getByText('📅 Смотрите план на этот день')).toBeTruthy();
+    expect(getByText(i18n.t('stats.viewPlan'))).toBeTruthy();
   });
 });

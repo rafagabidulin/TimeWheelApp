@@ -36,32 +36,32 @@ function getCategoryForTask(title: string): string {
   const titleLower = title.toLowerCase();
 
   // Работа
-  if (/работ|встреча|презентац|проект|офис|совещан/i.test(titleLower)) {
+  if (/работ|встреча|презентац|проект|офис|совещан|work|meeting|project|office|call|conference/i.test(titleLower)) {
     return 'work';
   }
 
   // Еда
-  if (/завтрак|обед|ужин|перекус|кофе|чай/i.test(titleLower)) {
+  if (/завтрак|обед|ужин|перекус|кофе|чай|breakfast|lunch|dinner|snack|coffee|tea|meal/i.test(titleLower)) {
     return 'food';
   }
 
   // Спорт
-  if (/тренир|спорт|бег|йога|гимнаст|плаван|фитнес|зарядк/i.test(titleLower)) {
+  if (/тренир|спорт|бег|йога|гимнаст|плаван|фитнес|зарядк|sport|gym|run|yoga|workout|training/i.test(titleLower)) {
     return 'sports';
   }
 
   // Учёба
-  if (/учёб|лекц|семинар|занят|курс|урок|практик/i.test(titleLower)) {
+  if (/учёб|лекц|семинар|занят|курс|урок|практик|study|lecture|class|course|school|university/i.test(titleLower)) {
     return 'study';
   }
 
   // Досуг
-  if (/кино|театр|концерт|друз|игр|развлеч|выход|прогулк|отдых/i.test(titleLower)) {
+  if (/кино|театр|концерт|друз|игр|развлеч|выход|прогулк|отдых|movie|concert|party|walk|rest|leisure|friends/i.test(titleLower)) {
     return 'leisure';
   }
 
   // Дом
-  if (/дом|уборк|готов|хозяйств|стирк|уход/i.test(titleLower)) {
+  if (/дом|уборк|готов|хозяйств|стирк|уход|home|clean|shopping|chores|laundry/i.test(titleLower)) {
     return 'home';
   }
 

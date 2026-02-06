@@ -5,6 +5,7 @@ import * as Crypto from 'expo-crypto';
 import CryptoJS from 'crypto-js';
 import { Day } from '../types/types';
 import { STORAGE_KEYS } from '../constants/theme';
+import i18n from '../i18n';
 import { logger } from './logger';
 
 export class StorageError extends Error {
@@ -39,7 +40,7 @@ async function decryptPayload(encryptedPayload: string): Promise<string> {
   const key = await getEncryptionKey();
   const decrypted = CryptoJS.AES.decrypt(encryptedPayload, key).toString(CryptoJS.enc.Utf8);
   if (!decrypted) {
-    throw new StorageError('Не удалось расшифровать данные.');
+    throw new StorageError(i18n.t('errors.storageDecrypt'));
   }
   return decrypted;
 }
@@ -67,7 +68,7 @@ export async function loadDaysFromStorage(): Promise<Day[]> {
     return [];
   } catch (error) {
     logger.error('Storage load error:', error);
-    throw new StorageError('Не удалось загрузить данные из хранилища. Попробуйте позже.');
+    throw new StorageError(i18n.t('errors.storageLoad'));
   }
 }
 
@@ -85,7 +86,7 @@ export async function saveDaysToStorage(days: Day[]): Promise<void> {
       await AsyncStorage.setItem(STORAGE_KEYS.days, encryptedPayload);
     } catch (error) {
       logger.error('Storage save error:', error);
-      throw new StorageError('Не удалось сохранить данные. Изменения могут быть потеряны.');
+      throw new StorageError(i18n.t('errors.storageSave'));
     }
   });
 
@@ -102,6 +103,6 @@ export async function clearStorage(): Promise<void> {
     await SecureStore.deleteItemAsync(ENCRYPTION_KEY_STORAGE);
   } catch (error) {
     logger.error('Storage clear error:', error);
-    throw new StorageError('Не удалось очистить хранилище.');
+    throw new StorageError(i18n.t('errors.storageClear'));
   }
 }

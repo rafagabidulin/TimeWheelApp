@@ -229,13 +229,13 @@ export const FONT_SIZES = {
 export const DAYS_OF_WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 
 export const DAYS_DATA = [
-  { id: 'monday', name: 'Пн' },
-  { id: 'tuesday', name: 'Вт' },
-  { id: 'wednesday', name: 'Ср' },
-  { id: 'thursday', name: 'Чт' },
-  { id: 'friday', name: 'Пт' },
-  { id: 'saturday', name: 'Сб' },
-  { id: 'sunday', name: 'Вс' },
+  { id: 'monday' },
+  { id: 'tuesday' },
+  { id: 'wednesday' },
+  { id: 'thursday' },
+  { id: 'friday' },
+  { id: 'saturday' },
+  { id: 'sunday' },
 ] as const;
 
 // ============================================================================

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { logger } from '../utils/logger';
+import i18n from '../i18n';
 
 type ErrorBoundaryProps = {
   children: React.ReactNode;
@@ -27,8 +28,8 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
     if (this.state.hasError) {
       return (
         <View style={styles.container}>
-          <Text style={styles.title}>Что-то пошло не так</Text>
-          <Text style={styles.subtitle}>Пожалуйста, перезапустите приложение.</Text>
+          <Text style={styles.title}>{i18n.t('errorBoundary.title')}</Text>
+          <Text style={styles.subtitle}>{i18n.t('errorBoundary.subtitle')}</Text>
         </View>
       );
     }

@@ -14,10 +14,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { FormData, Day } from '../../types/types';
 import { SPACING, FONT_SIZES, SIZES, SCREEN, useTheme } from '../../constants/theme';
 import { COLOR_OPTIONS, CATEGORY_OPTIONS } from '../../constants/theme';
+import { getCategoryLabel } from '../../i18n';
 
 interface SwipeableTaskModalProps {
   visible: boolean;
@@ -44,6 +46,7 @@ export default function SwipeableTaskModal({
   setFormData,
 }: SwipeableTaskModalProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const timePickerStyles = useMemo(() => createTimePickerStyles(colors), [colors]);
   const translateYRef = useRef(new Animated.Value(0)).current;
@@ -104,7 +107,7 @@ export default function SwipeableTaskModal({
 
   const handleSaveTask = async () => {
     if (!formData.title.trim()) {
-      Alert.alert('Ошибка', 'Введите название задачи');
+      Alert.alert(t('common.error'), t('errors.taskTitleRequired'));
       return;
     }
     try {
@@ -114,16 +117,17 @@ export default function SwipeableTaskModal({
         await onAdd();
       }
     } catch (error) {
-      const message = error instanceof Error && error.message ? error.message : 'Не удалось сохранить задачу';
+      const message =
+        error instanceof Error && error.message ? error.message : t('errors.taskSaveFailed');
 
-      if (message.includes('пересекается')) {
+      if (message.includes(t('errors.taskOverlap'))) {
         Alert.alert(
-          'Конфликт задач',
-          'Задача пересекается с уже существующей. Добавить и скорректировать старую задачу?',
+          t('alerts.taskConflictTitle'),
+          t('alerts.taskOverlapAdjustMessage'),
           [
-            { text: 'Отмена', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             {
-              text: 'Добавить',
+              text: t('common.add'),
               onPress: async () => {
                 try {
                   if (isEditing) {
@@ -135,8 +139,8 @@ export default function SwipeableTaskModal({
                   const innerMessage =
                     innerError instanceof Error && innerError.message
                       ? innerError.message
-                      : 'Не удалось сохранить задачу';
-                  Alert.alert('Ошибка', innerMessage);
+                      : t('errors.taskSaveFailed');
+                  Alert.alert(t('common.error'), innerMessage);
                 }
               },
             },
@@ -145,7 +149,7 @@ export default function SwipeableTaskModal({
         return;
       }
 
-      Alert.alert('Ошибка', message);
+      Alert.alert(t('common.error'), message);
     }
   };
 
@@ -190,16 +194,18 @@ export default function SwipeableTaskModal({
               <View style={styles.content}>
               {/* ЗАГОЛОВОК */}
               <View style={styles.header}>
-                <Text style={styles.title}>{isEditing ? 'Редактировать' : 'Добавить задачу'}</Text>
+                <Text style={styles.title}>
+                  {isEditing ? t('taskModal.editTitle') : t('taskModal.addTitle')}
+                </Text>
                 <Text style={styles.subtitle}>{currentDay.name}</Text>
               </View>
 
             {/* НАЗВАНИЕ */}
             <View style={styles.field}>
-              <Text style={styles.label}>Название</Text>
+              <Text style={styles.label}>{t('taskModal.titleLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Введите название"
+                placeholder={t('taskModal.titlePlaceholder')}
                 placeholderTextColor={colors.textLight}
                 value={formData.title}
                 onChangeText={(text) => setFormData({ ...formData, title: text })}
@@ -210,7 +216,7 @@ export default function SwipeableTaskModal({
 
             {/* ВРЕМЯ - КНОПКИ */}
             <View style={styles.field}>
-              <Text style={styles.label}>Время</Text>
+              <Text style={styles.label}>{t('taskModal.timeLabel')}</Text>
               <View style={styles.timeButtonRow}>
                 <TouchableOpacity
                   style={styles.timeButton}
@@ -230,7 +236,7 @@ export default function SwipeableTaskModal({
 
             {/* КАТЕГОРИЯ */}
             <View style={styles.field}>
-              <Text style={styles.label}>Категория</Text>
+              <Text style={styles.label}>{t('taskModal.categoryLabel')}</Text>
               <View style={styles.optionGrid}>
                 {CATEGORY_OPTIONS.map((cat) => (
                   <TouchableOpacity
@@ -242,7 +248,7 @@ export default function SwipeableTaskModal({
                         styles.optionText,
                         formData.category === cat && styles.optionTextSelected,
                       ]}>
-                      {cat}
+                      {getCategoryLabel(cat)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -251,7 +257,7 @@ export default function SwipeableTaskModal({
 
             {/* ЦВЕТ */}
             <View style={styles.field}>
-              <Text style={styles.label}>Цвет</Text>
+              <Text style={styles.label}>{t('taskModal.colorLabel')}</Text>
               <View style={styles.colorGrid}>
                 {COLOR_OPTIONS.map((color) => (
                   <TouchableOpacity
@@ -270,13 +276,15 @@ export default function SwipeableTaskModal({
             {/* КНОПКИ */}
             <View style={styles.buttons}>
               <TouchableOpacity style={[styles.button, styles.cancelBtn]} onPress={onClose}>
-                <Text style={styles.cancelText}>Отмена</Text>
+                <Text style={styles.cancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.saveBtn]}
                 onPress={handleSaveTask}
                 testID="task-save">
-                <Text style={styles.saveText}>{isEditing ? 'Сохранить' : 'Добавить'}</Text>
+                <Text style={styles.saveText}>
+                  {isEditing ? t('common.save') : t('common.add')}
+                </Text>
               </TouchableOpacity>
             </View>
               </View>
@@ -301,7 +309,7 @@ export default function SwipeableTaskModal({
 
             <View style={timePickerStyles.pickerContainer}>
               <View style={timePickerStyles.pickerHeader}>
-                <Text style={timePickerStyles.pickerTitle}>Стартовое время</Text>
+                <Text style={timePickerStyles.pickerTitle}>{t('taskModal.startTimeTitle')}</Text>
               </View>
 
               <DateTimePicker
@@ -318,7 +326,7 @@ export default function SwipeableTaskModal({
                 style={timePickerStyles.closeButton}
                 onPress={() => setShowStartTimePicker(false)}
                 activeOpacity={0.7}>
-                <Text style={timePickerStyles.closeButtonText}>Готово</Text>
+                <Text style={timePickerStyles.closeButtonText}>{t('common.done')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -341,7 +349,7 @@ export default function SwipeableTaskModal({
 
             <View style={timePickerStyles.pickerContainer}>
               <View style={timePickerStyles.pickerHeader}>
-                <Text style={timePickerStyles.pickerTitle}>Конечное время</Text>
+                <Text style={timePickerStyles.pickerTitle}>{t('taskModal.endTimeTitle')}</Text>
               </View>
 
               <DateTimePicker
@@ -358,7 +366,7 @@ export default function SwipeableTaskModal({
                 style={timePickerStyles.closeButton}
                 onPress={() => setShowEndTimePicker(false)}
                 activeOpacity={0.7}>
-                <Text style={timePickerStyles.closeButtonText}>Готово</Text>
+                <Text style={timePickerStyles.closeButtonText}>{t('common.done')}</Text>
               </TouchableOpacity>
             </View>
           </View>

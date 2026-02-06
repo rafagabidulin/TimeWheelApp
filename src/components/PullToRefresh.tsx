@@ -1,6 +1,7 @@
 // components/PullToRefresh.tsx
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, PanResponder } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SPACING, FONT_SIZES, useTheme } from '../constants/theme';
 import { logger } from '../utils/logger';
 
@@ -20,6 +21,7 @@ export default function PullToRefresh({
   refreshing: externalRefreshing = false,
 }: PullToRefreshProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -73,7 +75,9 @@ export default function PullToRefresh({
             },
           ]}>
           <Text style={styles.refreshText}>
-            {refreshing ? '⟳ Синхронизация...' : `⬇ Потяни для обновления (${pullDistance.toFixed(0)}px)`}
+            {refreshing
+              ? t('pullToRefresh.syncing')
+              : t('pullToRefresh.pull', { px: pullDistance.toFixed(0) })}
           </Text>
         </Animated.View>
       )}

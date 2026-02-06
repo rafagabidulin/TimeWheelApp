@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path, Text as SvgText, Line } from 'react-native-svg';
 import { Task, Day } from '../types/types';
 import { getAngle, getPathData, timeToHours } from '../utils/timeUtils';
+import { getDateLocale } from '../i18n';
 import {
   CLOCK_RADIUS,
   CENTER_X,
@@ -181,7 +182,7 @@ export default memo(function ClockView({
     });
   }, [colors.textSecondary]);
 
-  const formattedTime = currentTime.toLocaleTimeString('ru-RU', {
+  const formattedTime = currentTime.toLocaleTimeString(getDateLocale(), {
     hour: '2-digit',
     minute: '2-digit',
   });

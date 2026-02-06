@@ -4,6 +4,7 @@ import { Day, Task } from '../types/types';
 import { v4 as uuidv4 } from 'uuid';
 import { formatDateISO, parseDateISO } from './timeUtils';
 import { logger } from './logger';
+import i18n from '../i18n';
 
 /**
  * Двусторонняя синхронизация между TimeWheel и календарем iPhone
@@ -117,7 +118,7 @@ export async function importCalendarEventsToDay(calendarId: string, date: Date):
 
         const task: Task = {
           id: `imported-${event.id || uuidv4()}`,
-          title: event.title || 'Событие',
+          title: event.title || i18n.t('events.defaultTitle'),
           startTime,
           endTime,
           category,
@@ -240,7 +241,7 @@ export async function syncCalendarToDays(days: Day[], calendarId: string): Promi
 
         const task: Task = {
           id: `imported-${event.id || uuidv4()}`,
-          title: event.title || 'Событие',
+          title: event.title || i18n.t('events.defaultTitle'),
           startTime,
           endTime,
           category: getCategoryFromEventTitle(event.title || ''),

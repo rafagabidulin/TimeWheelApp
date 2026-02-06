@@ -20,7 +20,8 @@ import {
   timeToMinutes,
 } from '../utils/timeUtils';
 import { DAYS_DATA, DAYS_OF_WEEK } from '../constants/theme';
-import { WEEKLY_TEMPLATE, buildTasksForDate } from '../utils/templates';
+import i18n, { getDayLabel } from '../i18n';
+import { getWeeklyTemplate, buildTasksForDate } from '../utils/templates';
 import { logger } from '../utils/logger';
 
 export function useTaskManager() {
@@ -64,7 +65,8 @@ export function useTaskManager() {
   const getDayName = (date: Date): string => {
     const day = date.getDay();
     const index = day === 0 ? 6 : day - 1;
-    return DAYS_DATA[index]?.name || '';
+    const dayId = DAYS_DATA[index]?.id;
+    return dayId ? getDayLabel(dayId) : '';
   };
 
   const weekStart = getStartOfWeek(selectedDateObj);
@@ -74,10 +76,11 @@ export function useTaskManager() {
         const date = addDays(weekStart, index);
         const dateIso = formatDateISO(date);
         const existing = days.find((d) => d.date === dateIso);
+        const name = getDayLabel(day.id);
         return (
-          existing || {
+          (existing && { ...existing, name }) || {
             id: dateIso,
-            name: day.name,
+            name,
             date: dateIso,
             tasks: [],
           }
@@ -85,10 +88,12 @@ export function useTaskManager() {
       })
     : [];
 
+  const currentDayName = getDayName(selectedDateObj);
+  const existingCurrentDay = days.find((d) => d.date === selectedDate);
   const currentDay =
-    days.find((d) => d.date === selectedDate) || {
+    (existingCurrentDay && { ...existingCurrentDay, name: currentDayName }) || {
       id: selectedDate,
-      name: getDayName(selectedDateObj),
+      name: currentDayName,
       date: selectedDate,
       tasks: [],
     };
@@ -317,11 +322,11 @@ export function useTaskManager() {
   const validateTask = useCallback(
     (formData: FormData, ignoreTaskId?: string, allowOverlap?: boolean) => {
       if (!formData.title.trim()) {
-        throw new Error('Введите название задачи');
+        throw new Error(i18n.t('errors.taskTitleRequired'));
       }
 
       if (!isValidTimeRange(formData.startTime, formData.endTime)) {
-        throw new Error('Введите корректное время');
+        throw new Error(i18n.t('errors.taskTimeInvalid'));
       }
 
       if (!allowOverlap) {
@@ -337,7 +342,7 @@ export function useTaskManager() {
         );
 
         if (hasOverlap) {
-          throw new Error('Задача пересекается с уже существующей');
+          throw new Error(i18n.t('errors.taskOverlap'));
         }
       }
     },
@@ -641,7 +646,7 @@ export function useTaskManager() {
       const date = addDays(weekStart, index);
       const dateIso = formatDateISO(date);
       const existing = updatedDays.find((day) => day.date === dateIso);
-      const templateTasks = WEEKLY_TEMPLATE[weekdayId] || [];
+      const templateTasks = getWeeklyTemplate()[weekdayId] || [];
 
       if (templateTasks.length === 0) {
         return;
@@ -652,7 +657,7 @@ export function useTaskManager() {
       }
 
       const tasksForDate = buildTasksForDate(date, templateTasks, 'template');
-      const dayName = DAYS_DATA[index]?.name || getDayName(date);
+      const dayName = getDayLabel(DAYS_DATA[index]?.id || '') || getDayName(date);
 
       if (existing) {
         existing.tasks = tasksForDate;

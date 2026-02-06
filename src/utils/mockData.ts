@@ -1,8 +1,9 @@
 // utils/mockData.ts
 import { Day } from '../types/types';
 import { DAYS_DATA, DAYS_OF_WEEK } from '../constants/theme';
+import { getDayLabel } from '../i18n';
 import { addDays, formatDateISO } from './timeUtils';
-import { WEEKLY_TEMPLATE, buildTasksForDate } from './templates';
+import { getWeeklyTemplate, buildTasksForDate } from './templates';
 
 function getStartOfWeek(date: Date): Date {
   const result = new Date(date);
@@ -20,11 +21,11 @@ export const mockDays: Day[] = DAYS_DATA.map((day, index) => {
   const resolvedIndex = dayIndex >= 0 ? dayIndex : index;
   const date = addDays(weekStart, resolvedIndex);
   const dateIso = formatDateISO(date);
-  const templateTasks = WEEKLY_TEMPLATE[day.id] || [];
+  const templateTasks = getWeeklyTemplate()[day.id] || [];
 
   return {
     id: dateIso,
-    name: day.name,
+    name: getDayLabel(day.id),
     date: dateIso,
     tasks: buildTasksForDate(date, templateTasks, 'template'),
   };

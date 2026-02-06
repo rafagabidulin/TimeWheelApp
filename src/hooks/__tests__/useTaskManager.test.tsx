@@ -5,6 +5,7 @@ import { useTaskManager } from '../useTaskManager';
 import { mockDays } from '../../utils/mockData';
 import { formatDateISO } from '../../utils/timeUtils';
 import { Day } from '../../types/types';
+import { getDayLabel } from '../../i18n';
 
 jest.mock('../../utils/calendarSync', () => ({
   initializeCalendarSync: jest.fn().mockResolvedValue({
@@ -86,7 +87,7 @@ describe('useTaskManager', () => {
     const storedDays: Day[] = [
       {
         id: dateIso,
-        name: 'Сегодня',
+        name: getDayLabel('sunday'),
         date: dateIso,
         tasks: [
           {
@@ -116,7 +117,7 @@ describe('useTaskManager', () => {
   it('adds a task and persists', async () => {
     const dateIso = formatDateISO(fixedNow);
     mockLoadDaysFromStorage.mockResolvedValue([
-      { id: dateIso, name: 'Сегодня', date: dateIso, tasks: [] },
+      { id: dateIso, name: getDayLabel('sunday'), date: dateIso, tasks: [] },
     ]);
 
     const { getByTestId } = render(<HookHarness />);

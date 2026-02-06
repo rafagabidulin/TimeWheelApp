@@ -6,6 +6,7 @@ import DaySelector from '../components/DaySelector';
 import TaskListView from '../components/TaskListView';
 import StatsBar from '../components/StatsBar';
 import { mockDays } from '../utils/mockData';
+import i18n from '../i18n';
 
 const mockLoadDaysFromStorage = jest.fn();
 const mockSaveDaysToStorage = jest.fn().mockResolvedValue(undefined);
@@ -85,7 +86,7 @@ describe('Task flow integration', () => {
     await waitFor(() => {
       expect(getByTestId('days-count').props.children).toBe(String(mockDays.length));
     });
-    expect(getByText('Нет задач на этот день')).toBeTruthy();
+    expect(getByText(i18n.t('tasks.empty'))).toBeTruthy();
 
     fireEvent.press(getByTestId('add-task'));
 

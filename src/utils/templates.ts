@@ -1,41 +1,42 @@
 import { Task } from '../types/types';
 import { CATEGORY_COLORS } from '../constants/theme';
 import { formatDateISO } from './timeUtils';
+import i18n from '../i18n';
 
 export type TemplateTask = Omit<Task, 'id' | 'date' | 'calendarEventId'>;
 
-export const WEEKLY_TEMPLATE: Record<string, TemplateTask[]> = {
+export const getWeeklyTemplate = (): Record<string, TemplateTask[]> => ({
   monday: [
     {
-      title: 'Завтрак',
+      title: i18n.t('templates.breakfast'),
       startTime: '08:00',
       endTime: '08:30',
       category: 'food',
       color: CATEGORY_COLORS.food,
     },
     {
-      title: 'Работа',
+      title: i18n.t('templates.work'),
       startTime: '09:00',
       endTime: '13:00',
       category: 'work',
       color: CATEGORY_COLORS.work,
     },
     {
-      title: 'Обед',
+      title: i18n.t('templates.lunch'),
       startTime: '13:00',
       endTime: '14:00',
       category: 'food',
       color: CATEGORY_COLORS.food,
     },
     {
-      title: 'Проект',
+      title: i18n.t('templates.project'),
       startTime: '14:00',
       endTime: '18:00',
       category: 'work',
       color: '#FF9800',
     },
     {
-      title: 'Тренировка',
+      title: i18n.t('templates.workout'),
       startTime: '19:00',
       endTime: '20:00',
       category: 'sports',
@@ -44,14 +45,14 @@ export const WEEKLY_TEMPLATE: Record<string, TemplateTask[]> = {
   ],
   tuesday: [
     {
-      title: 'Встреча',
+      title: i18n.t('templates.meeting'),
       startTime: '10:00',
       endTime: '11:30',
       category: 'work',
       color: CATEGORY_COLORS.work,
     },
     {
-      title: 'Учёба',
+      title: i18n.t('templates.study'),
       startTime: '12:00',
       endTime: '15:00',
       category: 'study',
@@ -60,7 +61,7 @@ export const WEEKLY_TEMPLATE: Record<string, TemplateTask[]> = {
   ],
   wednesday: [
     {
-      title: 'Работа',
+      title: i18n.t('templates.work'),
       startTime: '08:00',
       endTime: '17:00',
       category: 'work',
@@ -70,7 +71,7 @@ export const WEEKLY_TEMPLATE: Record<string, TemplateTask[]> = {
   thursday: [],
   friday: [
     {
-      title: 'Презентация',
+      title: i18n.t('templates.presentation'),
       startTime: '14:00',
       endTime: '16:00',
       category: 'work',
@@ -79,14 +80,14 @@ export const WEEKLY_TEMPLATE: Record<string, TemplateTask[]> = {
   ],
   saturday: [
     {
-      title: 'Хозяйство',
+      title: i18n.t('templates.chores'),
       startTime: '10:00',
       endTime: '13:00',
       category: 'home',
       color: CATEGORY_COLORS.home,
     },
     {
-      title: 'Друзья',
+      title: i18n.t('templates.friends'),
       startTime: '18:00',
       endTime: '22:00',
       category: 'leisure',
@@ -95,14 +96,14 @@ export const WEEKLY_TEMPLATE: Record<string, TemplateTask[]> = {
   ],
   sunday: [
     {
-      title: 'Отдых',
+      title: i18n.t('templates.rest'),
       startTime: '00:00',
       endTime: '23:59',
       category: 'leisure',
       color: CATEGORY_COLORS.leisure,
     },
   ],
-};
+});
 
 export function buildTasksForDate(
   date: Date,

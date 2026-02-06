@@ -2,11 +2,12 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import ClockView from '../ClockView';
 import { Day, Task } from '../../types/types';
+import { getDayLabel } from '../../i18n';
 
 describe('ClockView', () => {
   const currentDay: Day = {
     id: 'monday',
-    name: 'Пн',
+    name: getDayLabel('monday'),
     date: '2025-01-05',
     tasks: [],
   };
@@ -49,7 +50,7 @@ describe('ClockView', () => {
     };
 
     expect(readSvgText(getByTestId('clock-time'))).toBe('10:05');
-    expect(readSvgText(getByTestId('clock-date'))).toBe('Пн 05');
+    expect(readSvgText(getByTestId('clock-date'))).toBe(`${getDayLabel('monday')} 05`);
     expect(readSvgText(getByTestId('clock-task-task-1'))).toBe('Работа');
   });
 });

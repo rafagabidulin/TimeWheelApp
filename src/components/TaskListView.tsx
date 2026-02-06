@@ -1,9 +1,11 @@
 // components/TaskListView.tsx
 import React, { useMemo } from 'react';
 import { StyleSheet, View, TouchableOpacity, Text, FlatList } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Task } from '../types/types';
 import { SPACING, FONT_SIZES, SIZES, useTheme } from '../constants/theme';
 import { getDurationMinutes } from '../utils/timeUtils';
+import { getCategoryLabel } from '../i18n';
 
 interface TaskListViewProps {
   tasks: Task[];
@@ -30,18 +32,21 @@ export default function TaskListView({
   onDeleteTask,
 }: TaskListViewProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const formatDuration = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
+    const hoursLabel = t('time.hoursShort');
+    const minutesLabel = t('time.minutesShort');
     if (hours === 0) {
-      return `${mins}м`;
+      return `${mins}${minutesLabel}`;
     }
     if (mins === 0) {
-      return `${hours}ч`;
+      return `${hours}${hoursLabel}`;
     }
-    return `${hours}ч ${mins}м`;
+    return `${hours}${hoursLabel} ${mins}${minutesLabel}`;
   };
 
   // Используем простой View с map() — это БЕЗОПАСНО и не вызывает ошибок VirtualizedLists
@@ -50,7 +55,7 @@ export default function TaskListView({
   if (tasks.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>Нет задач на этот день</Text>
+        <Text style={styles.emptyText}>{t('tasks.empty')}</Text>
       </View>
     );
   }
@@ -77,7 +82,7 @@ export default function TaskListView({
                   {task.title}
                 </Text>
                 <Text style={styles.taskTime}>
-                  {task.startTime} – {task.endTime} • {task.category}
+                  {task.startTime} – {task.endTime} • {getCategoryLabel(task.category)}
                 </Text>
               </View>
               <Text style={styles.taskDuration}>{duration}</Text>

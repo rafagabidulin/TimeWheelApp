@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import TaskListView from '../TaskListView';
 import { Task } from '../../types/types';
+import i18n, { getCategoryLabel } from '../../i18n';
 
 describe('TaskListView', () => {
   const task: Task = {
@@ -25,7 +26,7 @@ describe('TaskListView', () => {
       />,
     );
 
-    expect(getByText('Нет задач на этот день')).toBeTruthy();
+    expect(getByText(i18n.t('tasks.empty'))).toBeTruthy();
   });
 
   it('renders task and handles edit/delete actions', () => {
@@ -43,8 +44,8 @@ describe('TaskListView', () => {
     );
 
     expect(getByText('▶ Работа')).toBeTruthy();
-    expect(getByText('09:00 – 10:30 • work')).toBeTruthy();
-    expect(getByText('1ч 30м')).toBeTruthy();
+    expect(getByText(`09:00 – 10:30 • ${getCategoryLabel('work')}`)).toBeTruthy();
+    expect(getByText(`1${i18n.t('time.hoursShort')} 30${i18n.t('time.minutesShort')}`)).toBeTruthy();
 
     fireEvent.press(getByTestId('task-item-task-1'));
     expect(onEditTask).toHaveBeenCalledWith('task-1');

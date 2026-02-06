@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useTaskManager } from './hooks/useTaskManager';
 import { SPACING, FONT_SIZES, ThemeProvider, useTheme, CLOCK_RADIUS, CENTER_Y } from './constants/theme';
@@ -45,6 +46,7 @@ import { syncCalendarToDays } from './utils/bidirectionalSync';
  */
 function AppContent() {
   const { colors, scheme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const iconSize = 28;
@@ -103,7 +105,7 @@ function AppContent() {
       color: '#4CAF50',
       category: 'custom',
     });
-  }, []);
+  }, [t]);
 
   /**
    * Открытие модального окна для редактирования задачи
@@ -170,11 +172,11 @@ function AppContent() {
   const confirmAddConflict = useCallback((taskTitle: string) => {
     return new Promise<boolean>((resolve) => {
       Alert.alert(
-        'Конфликт задач',
-        `Задача "${taskTitle}" пересекается с уже существующей. Добавить всё равно?`,
+        t('alerts.taskConflictTitle'),
+        t('alerts.taskConflictMessage', { title: taskTitle }),
         [
-          { text: 'Пропустить', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Добавить', onPress: () => resolve(true) },
+          { text: t('common.skip'), style: 'cancel', onPress: () => resolve(false) },
+          { text: t('common.add'), onPress: () => resolve(true) },
         ],
       );
     });
@@ -197,7 +199,7 @@ function AppContent() {
           added += 1;
         } catch (error) {
           const message = error instanceof Error ? error.message : '';
-          if (message.includes('пересекается')) {
+          if (message.includes(t('errors.taskOverlap'))) {
             const shouldAdd = await confirmAddConflict(task.title);
             if (shouldAdd) {
               await addTask(
@@ -229,14 +231,14 @@ function AppContent() {
     try {
       const appliedCount = await applyWeeklyTemplate();
       if (appliedCount === 0) {
-        Alert.alert('Шаблон', 'Все дни недели уже заполнены.');
+        Alert.alert(t('alerts.templateTitle'), t('alerts.templateAllFilled'));
         return;
       }
-      Alert.alert('Шаблон', `Добавлены шаблоны для ${appliedCount} дней.`);
+      Alert.alert(t('alerts.templateTitle'), t('alerts.templateApplied', { count: appliedCount }));
     } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось применить шаблон недели.');
+      Alert.alert(t('common.error'), t('alerts.templateError'));
     }
-  }, [applyWeeklyTemplate]);
+  }, [applyWeeklyTemplate, t]);
 
   // ============================================================================
   // НАВИГАЦИЯ МЕЖДУ ДНЯМИ
@@ -314,7 +316,7 @@ function AppContent() {
             <View style={styles.themeToggleRow}>
               <TouchableOpacity style={styles.themeToggleButton} onPress={toggleTheme}>
                 <Text style={styles.themeToggleText}>
-                  {scheme === 'dark' ? '☀️ Светлая тема' : '🌙 Тёмная тема'}
+                  {scheme === 'dark' ? t('ui.lightTheme') : t('ui.darkTheme')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -378,14 +380,14 @@ function AppContent() {
                 style={styles.parserButton}
                 onPress={() => setParserModalVisible(true)}
                 activeOpacity={0.7}>
-                <Text style={styles.parserButtonText}>📋 Добавить расписание</Text>
+                <Text style={styles.parserButtonText}>{t('ui.addSchedule')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.templateButton}
                 onPress={handleApplyWeeklyTemplate}
                 activeOpacity={0.7}>
-                <Text style={styles.templateButtonText}>📅 Применить шаблон недели</Text>
+                <Text style={styles.templateButtonText}>{t('ui.applyWeeklyTemplate')}</Text>
               </TouchableOpacity>
 
               {/* КНОПКА ДОБАВЛЕНИЯ ЗАДАЧИ */}
@@ -393,7 +395,7 @@ function AppContent() {
                 style={styles.addButton}
                 onPress={handleOpenAddModal}
                 activeOpacity={0.7}>
-                <Text style={styles.addButtonText}>+ Добавить задачу</Text>
+                <Text style={styles.addButtonText}>{t('ui.addTask')}</Text>
               </TouchableOpacity>
 
               {/* СТАТИСТИКА */}
@@ -426,6 +428,9 @@ function AppContent() {
       canGoNext,
       handlePrevDay,
       handleNextDay,
+      scheme,
+      toggleTheme,
+      t,
     ],
   );
 

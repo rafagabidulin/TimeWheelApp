@@ -25,7 +25,7 @@ describe('ScheduleParserModal', () => {
   });
 
   it('parses input and adds tasks', async () => {
-    const { getByTestId, findByText } = render(
+    const { getByTestId } = render(
       <ScheduleParserModal visible={true} onClose={onClose} onAddTasks={onAddTasks} />,
     );
 
@@ -35,7 +35,9 @@ describe('ScheduleParserModal', () => {
     );
     fireEvent.press(getByTestId('schedule-parse'));
 
-    await findByText('Работа');
+    await waitFor(() => {
+      expect(getByTestId('schedule-add')).toBeTruthy();
+    });
 
     fireEvent.press(getByTestId('schedule-add'));
 

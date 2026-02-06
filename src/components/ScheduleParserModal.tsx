@@ -15,9 +15,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { parseSchedule, validateParsedTask, ParsedTask } from '../utils/scheduleParser';
 import { SPACING, FONT_SIZES, SIZES, useTheme } from '../constants/theme';
 import { logger } from '../utils/logger';
+import { getCategoryLabel } from '../i18n';
 
 interface ScheduleParserModalProps {
   visible: boolean;
@@ -36,6 +38,7 @@ export default function ScheduleParserModal({
   onAddTasks,
 }: ScheduleParserModalProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [input, setInput] = useState('');
   const [parsedTasks, setParsedTasks] = useState<ParsedTask[]>([]);
@@ -47,7 +50,7 @@ export default function ScheduleParserModal({
    */
   const handleParse = () => {
     if (!input.trim()) {
-      Alert.alert('Ошибка', 'Введите расписание');
+      Alert.alert(t('common.error'), t('parser.inputRequired'));
       return;
     }
 
@@ -57,7 +60,7 @@ export default function ScheduleParserModal({
       const tasks = parseSchedule(input);
 
       if (tasks.length === 0) {
-        Alert.alert('Ошибка', 'Не удалось распарсить расписание. Попробуйте формат: "Название 9:00-13:00"');
+        Alert.alert(t('common.error'), t('parser.parseFailedHint'));
         setLoading(false);
         return;
       }
@@ -72,7 +75,7 @@ export default function ScheduleParserModal({
       });
 
       if (validatedTasks.length === 0) {
-        Alert.alert('Ошибка', 'Все задачи содержат ошибки. Проверьте формат времени.');
+        Alert.alert(t('common.error'), t('parser.allInvalid'));
         setLoading(false);
         return;
       }
@@ -81,7 +84,7 @@ export default function ScheduleParserModal({
       setShowPreview(true);
     } catch (error) {
       logger.error('[Parser] Error:', error);
-      Alert.alert('Ошибка', 'Ошибка при парсинге расписания');
+      Alert.alert(t('common.error'), t('parser.parseError'));
     } finally {
       setLoading(false);
     }
@@ -98,12 +101,12 @@ export default function ScheduleParserModal({
       setParsedTasks([]);
       setShowPreview(false);
       const skippedInfo =
-        result.skipped > 0 ? `, пропущено ${result.skipped} из-за конфликтов` : '';
-      Alert.alert('Успех', `Добавлено ${result.added} задач${skippedInfo}`);
+        result.skipped > 0 ? t('parser.skippedConflicts', { count: result.skipped }) : '';
+      Alert.alert(t('common.success'), t('parser.addedSummary', { count: result.added, skippedInfo }));
       onClose();
     } catch (error) {
       logger.error('[Parser] Error adding tasks:', error);
-      Alert.alert('Ошибка', 'Не удалось добавить задачи');
+      Alert.alert(t('common.error'), t('parser.addFailed'));
     } finally {
       setLoading(false);
     }
@@ -130,15 +133,15 @@ export default function ScheduleParserModal({
             <>
               {/* ВВОД РАСПИСАНИЯ */}
               <View style={styles.header}>
-                <Text style={styles.title}>Добавить расписание</Text>
+                <Text style={styles.title}>{t('parser.title')}</Text>
                 <Text style={styles.hint}>
-                  Введите расписание в формате: "Название 9:00-13:00, название 13:00-14:00"
+                  {t('parser.hint')}
                 </Text>
               </View>
 
               <TextInput
                 style={styles.input}
-                placeholder="Работа 9:00-13:00, обед 13:00-14:00, тренировка 19:00-20:00"
+                placeholder={t('parser.placeholder')}
                 placeholderTextColor={colors.textLight}
                 value={input}
                 onChangeText={setInput}
@@ -154,7 +157,7 @@ export default function ScheduleParserModal({
                   style={[styles.button, styles.cancelBtn]}
                   onPress={handleClose}
                   disabled={loading}>
-                  <Text style={styles.cancelText}>Отмена</Text>
+                  <Text style={styles.cancelText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -166,7 +169,7 @@ export default function ScheduleParserModal({
                   {loading ? (
                     <ActivityIndicator color={colors.cardBackground} />
                   ) : (
-                    <Text style={styles.parseText}>Распарсить</Text>
+                    <Text style={styles.parseText}>{t('parser.parse')}</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -175,8 +178,8 @@ export default function ScheduleParserModal({
             <>
               {/* ПРЕДПРОСМОТР РАСПАРСЕННЫХ ЗАДАЧ */}
               <View style={styles.header}>
-                <Text style={styles.title}>Проверка расписания</Text>
-                <Text style={styles.subtitle}>Найдено {parsedTasks.length} задач</Text>
+                <Text style={styles.title}>{t('parser.previewTitle')}</Text>
+                <Text style={styles.subtitle}>{t('parser.foundCount', { count: parsedTasks.length })}</Text>
               </View>
 
               <ScrollView style={styles.preview} keyboardShouldPersistTaps="handled">
@@ -189,7 +192,7 @@ export default function ScheduleParserModal({
                       <Text style={styles.taskTime}>
                         {task.startTime} → {task.endTime}
                       </Text>
-                      <Text style={styles.taskCategory}>{task.category}</Text>
+                      <Text style={styles.taskCategory}>{getCategoryLabel(task.category)}</Text>
                     </View>
                   </View>
                 ))}
@@ -201,7 +204,7 @@ export default function ScheduleParserModal({
                   onPress={() => setShowPreview(false)}
                   disabled={loading}
                   testID="schedule-back">
-                  <Text style={styles.cancelText}>Назад</Text>
+                  <Text style={styles.cancelText}>{t('common.back')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -213,7 +216,7 @@ export default function ScheduleParserModal({
                   {loading ? (
                     <ActivityIndicator color={colors.cardBackground} />
                   ) : (
-                    <Text style={styles.addText}>Добавить все</Text>
+                    <Text style={styles.addText}>{t('parser.addAll')}</Text>
                   )}
                 </TouchableOpacity>
               </View>
