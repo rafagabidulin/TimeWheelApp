@@ -45,7 +45,7 @@ import { syncCalendarToDays } from './utils/bidirectionalSync';
  * - Парсинг расписания из текста
  */
 function AppContent() {
-  const { colors, scheme, toggleTheme } = useTheme();
+  const { colors, setMode } = useTheme();
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
@@ -83,6 +83,7 @@ function AppContent() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     title: '',
@@ -144,6 +145,22 @@ function AppContent() {
     await addTask(formData, options);
     closeModal();
   }, [formData, addTask, closeModal]);
+
+  const handleDeleteTask = useCallback(
+    (taskId: string) => {
+      Alert.alert('Удалить задачу?', 'Это действие нельзя отменить.', [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Удалить',
+          style: 'destructive',
+          onPress: () => {
+            void deleteTask(taskId);
+          },
+        },
+      ]);
+    },
+    [deleteTask],
+  );
 
   /**
    * Открытие модального окна для добавления новой задачи
@@ -240,6 +257,19 @@ function AppContent() {
     }
   }, [applyWeeklyTemplate, t]);
 
+  const toggleMenu = useCallback(() => {
+    setMenuVisible((prev) => !prev);
+  }, []);
+
+  const handleMenuItemPress = useCallback((label: string, action?: () => void) => {
+    setMenuVisible(false);
+    if (action) {
+      action();
+      return;
+    }
+    Alert.alert(label);
+  }, []);
+
   // ============================================================================
   // НАВИГАЦИЯ МЕЖДУ ДНЯМИ
   // ============================================================================
@@ -291,6 +321,8 @@ function AppContent() {
   const canGoPrev = useMemo(() => true, []);
   const canGoNext = useMemo(() => true, []);
 
+  const headerHeight = 32;
+
   // ============================================================================
   // FlatList DATA — ОДИН ЭЛЕМЕНТ ДЛЯ СОДЕРЖИМОГО
   // ============================================================================
@@ -301,6 +333,49 @@ function AppContent() {
         id: 'screen',
         component: (
           <View {...swipeResponder.panHandlers}>
+            {/* ШАПКА */}
+            <View style={[styles.header, { height: headerHeight + insets.top, paddingTop: insets.top }]}>
+              <View style={styles.headerContent}>
+                <View style={styles.headerSpacer} />
+                <Text style={styles.headerTitle}>TimeWheel</Text>
+                <TouchableOpacity style={styles.headerButton} onPress={toggleMenu} activeOpacity={0.7}>
+                  <View style={styles.burgerIcon}>
+                    <View style={styles.burgerLine} />
+                    <View style={styles.burgerLine} />
+                    <View style={styles.burgerLine} />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {menuVisible && (
+              <>
+                <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
+                  <View style={styles.menuOverlay} />
+                </TouchableWithoutFeedback>
+                <View
+                  style={[
+                    styles.menuContainer,
+                    { top: headerHeight + insets.top, left: 0, right: 0 },
+                  ]}>
+                  {[
+                    { label: 'Светлая тема', action: () => setMode('light') },
+                    { label: 'Темная тема', action: () => setMode('dark') },
+                    { label: 'Напоминания' },
+                    { label: 'О приложении' },
+                  ].map((item) => (
+                    <TouchableOpacity
+                      key={item.label}
+                      style={styles.menuItem}
+                      onPress={() => handleMenuItemPress(item.label, item.action)}
+                      activeOpacity={0.7}>
+                      <Text style={styles.menuItemText}>{item.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+
             {/* ОШИБКИ ХРАНИЛИЩА */}
             {storageError && (
               <StorageErrorBanner message={storageError} onDismiss={clearStorageError} />
@@ -312,14 +387,6 @@ function AppContent() {
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
             />
-
-            <View style={styles.themeToggleRow}>
-              <TouchableOpacity style={styles.themeToggleButton} onPress={toggleTheme}>
-                <Text style={styles.themeToggleText}>
-                  {scheme === 'dark' ? t('ui.lightTheme') : t('ui.darkTheme')}
-                </Text>
-              </TouchableOpacity>
-            </View>
 
             {/* ЦИФЕРБЛАТ */}
             <ClockView
@@ -372,7 +439,7 @@ function AppContent() {
                 currentTask={currentTask}
                 isCurrentDay={isCurrentDay}
                 onEditTask={handleEditTask}
-                onDeleteTask={deleteTask}
+                onDeleteTask={handleDeleteTask}
               />
 
               {/* КНОПКА ПАРСЕРА РАСПИСАНИЯ */}
@@ -428,8 +495,7 @@ function AppContent() {
       canGoNext,
       handlePrevDay,
       handleNextDay,
-      scheme,
-      toggleTheme,
+      setMode,
       t,
     ],
   );
@@ -439,7 +505,7 @@ function AppContent() {
   // ============================================================================
 
   return (
-    <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]} edges={[]}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         {/* FlatList ВМЕСТО ScrollView — ДЛЯ СОВМЕСТИМОСТИ С ВЛОЖЕННЫМИ FlatList */}
         <FlatList
@@ -573,7 +639,7 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   todayButtonRow: {
     position: 'absolute',
     right: SPACING.lg,
-    top: CENTER_Y + CLOCK_RADIUS + 78,
+    top: CENTER_Y + CLOCK_RADIUS + Math.round(CLOCK_RADIUS * 0.8),
     zIndex: 10,
   },
   todayButton: {
@@ -591,26 +657,75 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     borderWidth: 1,
     borderColor: colors.border,
   },
-  bottomSection: {
-    marginTop: -SPACING.xxl - 40,
+  header: {
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.primary,
   },
-  themeToggleRow: {
-    width: '90%',
-    alignSelf: 'center',
-    marginBottom: SPACING.sm,
+  headerContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    width: '100%',
+    marginTop: -4,
   },
-  themeToggleButton: {
-    alignSelf: 'flex-end',
+  headerSpacer: {
+    width: 84,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '700',
+    color: colors.cardBackground,
+    textAlign: 'center',
+  },
+  headerButton: {
+    width: 84,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  burgerIcon: {
+    width: 22,
+    height: 16,
+    justifyContent: 'space-between',
+  },
+  burgerLine: {
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: colors.cardBackground,
+  },
+  menuContainer: {
+    position: 'absolute',
+    width: '100%',
+    backgroundColor: colors.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    paddingVertical: SPACING.xs,
+    zIndex: 20,
+  },
+  menuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+  },
+  menuItem: {
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
-    borderRadius: 999,
-    backgroundColor: colors.cardBackground,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  themeToggleText: {
+  menuItemText: {
     fontSize: FONT_SIZES.sm,
-    color: colors.textSecondary,
+    color: colors.cardBackground,
     fontWeight: '600',
+  },
+  bottomSection: {
+    marginTop: -SPACING.sm + 20,
   },
 });

@@ -1,7 +1,7 @@
 // components/ClockView.tsx
 import React, { useMemo, memo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Svg, { Circle, Path, Text as SvgText, Line } from 'react-native-svg';
+import Svg, { Circle, Path, Text as SvgText, Line, TSpan, Rect } from 'react-native-svg';
 import { Task, Day } from '../types/types';
 import { getAngle, getPathData, timeToHours } from '../utils/timeUtils';
 import { getDateLocale } from '../i18n';
@@ -52,10 +52,73 @@ export default memo(function ClockView({
   // Вычисляем угол стрелки только при изменении времени
   const currentAngle = isCurrentDay ? getAngle(currentHours) : 0;
   const angleRad = (currentAngle - 90) * (Math.PI / 180);
+  const centerCircleRadius = CLOCK_RADIUS * 0.36;
+
+  const currentTaskTitle = useMemo(() => {
+    if (!isCurrentDay) return '';
+    const currentTask = currentDay.tasks.find((task) => {
+      const start = timeToHours(task.startTime);
+      let end = timeToHours(task.endTime);
+      if (start > end) {
+        end += 24;
+        return currentHours >= start || currentHours < end;
+      }
+      return currentHours >= start && currentHours < end;
+    });
+    return currentTask?.title ?? '';
+  }, [currentDay.tasks, currentHours, isCurrentDay]);
+
+  const wrappedTaskLines = useMemo(() => {
+    if (!currentTaskTitle) return [];
+    const maxLines = 2;
+    const maxCharsPerLine = Math.max(6, Math.floor((centerCircleRadius * 1.6) / (FONT_SIZES.sm * 0.6)));
+    const words = currentTaskTitle.trim().split(/\s+/);
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const nextLine = currentLine ? `${currentLine} ${word}` : word;
+      if (nextLine.length <= maxCharsPerLine) {
+        currentLine = nextLine;
+        continue;
+      }
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        lines.push(word.slice(0, maxCharsPerLine));
+        currentLine = word.slice(maxCharsPerLine);
+      }
+      if (lines.length >= maxLines) {
+        break;
+      }
+    }
+
+    if (lines.length < maxLines && currentLine) {
+      lines.push(currentLine);
+    }
+
+    if (lines.length > maxLines) {
+      lines.length = maxLines;
+    }
+
+    if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length) {
+      const lastIndex = lines.length - 1;
+      const lastLine = lines[lastIndex];
+      lines[lastIndex] =
+        lastLine.length > maxCharsPerLine - 3
+          ? `${lastLine.slice(0, Math.max(0, maxCharsPerLine - 3))}...`
+          : `${lastLine}...`;
+    }
+
+    return lines;
+  }, [currentTaskTitle, centerCircleRadius]);
+
+  const showNoTaskLabel = isCurrentDay && !currentTaskTitle;
 
   // Кэшируем координаты текста для каждой задачи
   const taskTextCoordinates = useMemo(() => {
-    const textRadius = 50;
+    const textRadius = CLOCK_RADIUS * 0.45;
     return tasks.map((task) => {
       const startHours = timeToHours(task.startTime);
       let endHours = timeToHours(task.endTime);
@@ -80,7 +143,7 @@ export default memo(function ClockView({
   }, [tasks]);
 
   const hourLabels = useMemo(() => {
-    const labelRadius = CLOCK_RADIUS - 28;
+    const labelRadius = CLOCK_RADIUS * 1.08;
     return Array.from({ length: 24 }, (_, i) => {
       const angle = (i / 24) * 360 - 90;
       const rad = angle * (Math.PI / 180);
@@ -108,8 +171,8 @@ export default memo(function ClockView({
     return Array.from({ length: 24 }, (_, i) => {
       const angle = (i / 24) * 360 - 90;
       const rad = angle * (Math.PI / 180);
-      const innerRadius = 45;
-      const outerRadius = CLOCK_RADIUS - 47;
+      const innerRadius = CLOCK_RADIUS * 0.36;
+      const outerRadius = CLOCK_RADIUS;
       const x1 = CENTER_X + innerRadius * Math.cos(rad);
       const y1 = CENTER_Y + innerRadius * Math.sin(rad);
       const x2 = CENTER_X + outerRadius * Math.cos(rad);
@@ -134,7 +197,7 @@ export default memo(function ClockView({
     return Array.from({ length: 24 }, (_, i) => {
       const angle = (i / 24) * 360 - 90;
       const rad = angle * (Math.PI / 180);
-      const innerRadius = CLOCK_RADIUS - 10;
+      const innerRadius = CLOCK_RADIUS * 0.92;
       const outerRadius = CLOCK_RADIUS;
       const x1 = CENTER_X + innerRadius * Math.cos(rad);
       const y1 = CENTER_Y + innerRadius * Math.sin(rad);
@@ -156,31 +219,6 @@ export default memo(function ClockView({
     });
   }, [colors.textSecondary]);
 
-  const outerEdgeTicks = useMemo(() => {
-    return Array.from({ length: 24 }, (_, i) => {
-      const angle = (i / 24) * 360 - 90;
-      const rad = angle * (Math.PI / 180);
-      const innerRadius = CLOCK_RADIUS;
-      const outerRadius = CLOCK_RADIUS + 10;
-      const x1 = CENTER_X + innerRadius * Math.cos(rad);
-      const y1 = CENTER_Y + innerRadius * Math.sin(rad);
-      const x2 = CENTER_X + outerRadius * Math.cos(rad);
-      const y2 = CENTER_Y + outerRadius * Math.sin(rad);
-
-      return (
-        <Line
-          key={`outer-tick-out-${i}`}
-          x1={x1}
-          y1={y1}
-          x2={x2}
-          y2={y2}
-          stroke={colors.textSecondary}
-          strokeWidth={1}
-          opacity={0.25}
-        />
-      );
-    });
-  }, [colors.textSecondary]);
 
   const formattedTime = currentTime.toLocaleTimeString(getDateLocale(), {
     hour: '2-digit',
@@ -212,9 +250,6 @@ export default memo(function ClockView({
           {/* КОРОТКИЕ МЕТКИ ОТ ГРАНИЦЫ ЦИФЕРБЛАТА ВНУТРЬ */}
           {innerEdgeTicks}
 
-          {/* КОРОТКИЕ МЕТКИ С НАРУЖНОЙ СТОРОНЫ */}
-          {outerEdgeTicks}
-
           {/* ЗАДАЧИ НА ЦИФЕРБЛАТЕ */}
           {tasks.map((task, index) => {
             const startHours = timeToHours(task.startTime);
@@ -245,9 +280,9 @@ export default memo(function ClockView({
                 <Path
                   d={pathData}
                   fill={task.color}
-                  opacity={isCurrentTask ? '0.9' : '0.6'}
+                  opacity="0.6"
                   strokeWidth={isCurrentTask ? '2' : '0'}
-                stroke={isCurrentTask ? colors.textPrimary : 'transparent'}
+                  stroke={isCurrentTask ? colors.textPrimary : 'transparent'}
                 />
                 <SvgText
                   x={coords.x}
@@ -270,8 +305,8 @@ export default memo(function ClockView({
           {isCurrentDay && (
             <Path
               d={`M ${CENTER_X} ${CENTER_Y} L ${
-                CENTER_X + (CLOCK_RADIUS - 20) * Math.cos(angleRad)
-              } ${CENTER_Y + (CLOCK_RADIUS - 20) * Math.sin(angleRad)}`}
+                CENTER_X + CLOCK_RADIUS * 0.84 * Math.cos(angleRad)
+              } ${CENTER_Y + CLOCK_RADIUS * 0.84 * Math.sin(angleRad)}`}
               stroke={colors.primary}
               opacity={0.8}
               strokeWidth="4"
@@ -283,7 +318,7 @@ export default memo(function ClockView({
           <Circle
             cx={CENTER_X}
             cy={CENTER_Y}
-            r="45"
+            r={centerCircleRadius}
             fill={colors.cardBackground}
             stroke={colors.clockBorder}
             strokeWidth="2"
@@ -292,11 +327,11 @@ export default memo(function ClockView({
           {/* ВРЕМЯ В ЦЕНТРЕ */}
           <SvgText
             x={CENTER_X}
-            y={CENTER_Y - 4}
+            y={isCurrentDay ? CENTER_Y - 20 : CENTER_Y - 8}
             textAnchor="middle"
             dominantBaseline="middle"
             alignmentBaseline="middle"
-            fontSize={FONT_SIZES.xl}
+            fontSize={isCurrentDay ? FONT_SIZES.xxl : FONT_SIZES.xxxl}
             fontWeight="bold"
             fill={colors.textPrimary}
             testID="clock-time">
@@ -306,16 +341,58 @@ export default memo(function ClockView({
           {/* ДАТА В ЦЕНТРЕ */}
           <SvgText
             x={CENTER_X}
-            y={CENTER_Y + 12}
+            y={isCurrentDay ? CENTER_Y - 6 : CENTER_Y + 12}
             textAnchor="middle"
             dominantBaseline="middle"
             alignmentBaseline="middle"
-            fontSize={FONT_SIZES.xs}
+            fontSize={isCurrentDay ? FONT_SIZES.sm : FONT_SIZES.base}
             fontWeight="bold"
             fill={colors.textSecondary}
             testID="clock-date">
             {dateStr}
           </SvgText>
+
+          {/* НАЗВАНИЕ ТЕКУЩЕЙ ЗАДАЧИ */}
+          {!!wrappedTaskLines.length && (
+            <SvgText
+              x={CENTER_X}
+              y={CENTER_Y + 24}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              alignmentBaseline="middle"
+              fontSize={FONT_SIZES.lg}
+              fontWeight="600"
+              fill={colors.textPrimary}
+              opacity={0.9}
+              testID="clock-current-task">
+              {wrappedTaskLines.map((line, index) => (
+                <TSpan key={`task-line-${index}`} x={CENTER_X} dy={index === 0 ? 0 : 14}>
+                  {line}
+                </TSpan>
+              ))}
+            </SvgText>
+          )}
+
+          {showNoTaskLabel && (
+            <SvgText
+              x={CENTER_X}
+              y={CENTER_Y + 22}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              alignmentBaseline="middle"
+              fontSize={FONT_SIZES.xs}
+              fontWeight="600"
+              fill={colors.textSecondary}
+              opacity={0.9}
+              testID="clock-no-task">
+              <TSpan x={CENTER_X} dy={0}>
+                Нет текущей
+              </TSpan>
+              <TSpan x={CENTER_X} dy={12}>
+                задачи
+              </TSpan>
+            </SvgText>
+          )}
         </Svg>
       </View>
     </View>

@@ -8,14 +8,14 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // РАЗМЕРЫ ЦИФЕРБЛАТА
 // ============================================================================
 
-/** Радиус циферблата — 35% от ширины экрана для оптимального отображения */
-export const CLOCK_RADIUS = SCREEN_WIDTH * 0.35;
+/** Радиус циферблата — 42% от ширины экрана для более крупного отображения */
+export const CLOCK_RADIUS = SCREEN_WIDTH * 0.42;
 
 /** Смещение циферблата вниз/вверх для балансировки с заголовком */
-export const CLOCK_CENTER_OFFSET = -40;
+export const CLOCK_CENTER_OFFSET = -10;
 
 /** SVG высота и ширина */
-export const SVG_SIZE = 400;
+export const SVG_SIZE = Math.round(Math.max(320, CLOCK_RADIUS * 2 + 64));
 
 /** Центр X координата циферблата */
 export const CENTER_X = SVG_SIZE / 2;

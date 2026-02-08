@@ -27,7 +27,11 @@ export default function DaySelector({ days, selectedDate, onSelectDate }: DaySel
           onPress={() => onSelectDate(day.date)}
           activeOpacity={0.7}
           testID={`day-selector-${day.id}`}>
-          <Text style={[styles.dayText, selectedDate === day.date && styles.selectedDayText]}>
+          <Text
+            style={[styles.dayText, selectedDate === day.date && styles.selectedDayText]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}>
             {day.name}
           </Text>
         </TouchableOpacity>
@@ -40,12 +44,17 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({
   container: {
     flexDirection: 'row',
-    paddingHorizontal: SPACING.lg,
+    width: '100%',
+    paddingHorizontal: SPACING.md,
+    marginTop: SPACING.sm,
     marginBottom: SPACING.md,
-    gap: SPACING.sm,
+    gap: SPACING.xs,
   },
   dayChip: {
-    paddingHorizontal: SPACING.md,
+    flex: 1,
+    flexBasis: 0,
+    minWidth: 0,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.sm,
     backgroundColor: colors.cardBackground,
     borderRadius: SIZES.borderRadiusExtraLarge,
@@ -59,9 +68,10 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     borderColor: colors.primary,
   },
   dayText: {
-    fontSize: FONT_SIZES.base,
+    fontSize: FONT_SIZES.sm,
     color: colors.textSecondary,
     fontWeight: '600',
+    textAlign: 'center',
   },
   selectedDayText: {
     color: colors.cardBackground,
