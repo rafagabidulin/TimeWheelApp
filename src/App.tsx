@@ -47,7 +47,7 @@ import { initializeCalendarSync, getOrCreateTimeWheelCalendar } from './utils/ca
 import { syncCalendarToDays } from './utils/bidirectionalSync';
 
 /**
- * Главный компонент приложения TimeWheel
+ * Главный компонент приложения Routiva
  *
  * Отвечает за:
  * - Координацию между компонентами
@@ -536,7 +536,7 @@ function AppContent() {
                     <View style={styles.burgerLine} />
                   </View>
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>TimeWheel</Text>
+                <Text style={styles.headerTitle}>Routiva</Text>
                 <TouchableOpacity
                   style={[styles.headerIconButton, addMenuVisible && styles.headerIconButtonActive]}
                   onPress={toggleAddMenu}

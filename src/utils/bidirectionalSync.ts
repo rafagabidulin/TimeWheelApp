@@ -7,12 +7,18 @@ import { logger } from './logger';
 import i18n from '../i18n';
 
 /**
- * Двусторонняя синхронизация между TimeWheel и календарем iPhone
- * Позволяет добавлять события в Календарь и видеть их в TimeWheel
+ * Двусторонняя синхронизация между Routiva и календарем iPhone
+ * Позволяет добавлять события в Календарь и видеть их в Routiva
  * ИСПРАВЛЕНО: Обработка события.startDate как Date объекта или строки
  */
 
-const TIMEWHEEL_MARKER = 'TimeWheel App'; // Маркер для идентификации наших событий
+const ROUTIVA_MARKER = 'Routiva App';
+const LEGACY_TIMEWHEEL_MARKER = 'TimeWheel App';
+
+function isOurEvent(notes: string | undefined | null): boolean {
+  if (!notes) return false;
+  return notes.includes(ROUTIVA_MARKER) || notes.includes(LEGACY_TIMEWHEEL_MARKER);
+}
 const CALENDAR_LOOKBACK_MS = 60 * 1000;
 
 /**
@@ -54,8 +60,8 @@ function isReasonableDate(date: Date): boolean {
 }
 
 /**
- * Получить события TimeWheel из системного календаря iPhone
- * и преобразовать их в задачи TimeWheel
+ * Получить события из системного календаря iPhone
+ * и преобразовать их в задачи Routiva
  */
 export async function importCalendarEventsToDay(calendarId: string, date: Date): Promise<Task[]> {
   try {
@@ -78,7 +84,7 @@ export async function importCalendarEventsToDay(calendarId: string, date: Date):
     for (const event of events) {
       try {
         // Пропускаем all-day события и события TimeWheel (чтобы избежать дублей)
-        if (event.allDay || event.notes?.includes(TIMEWHEEL_MARKER)) {
+        if (event.allDay || isOurEvent(event.notes)) {
           continue;
         }
 
@@ -169,7 +175,7 @@ export async function syncCalendarToDays(days: Day[], calendarId: string): Promi
     for (const event of events) {
       try {
         // Пропускаем all-day события и события TimeWheel
-        if (event.allDay || event.notes?.includes(TIMEWHEEL_MARKER)) {
+        if (event.allDay || isOurEvent(event.notes)) {
           continue;
         }
 

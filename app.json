@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "TimeWheelApp",
-    "slug": "TimeWheelApp",
+    "name": "Routiva",
+    "slug": "routiva",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,8 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.yourcompany.timewheel",
       "infoPlist": {
-        "NSCalendarsUsageDescription": "TimeWheel использует календарь для синхронизации ваших задач",
-        "NSContactsUsageDescription": "TimeWheel использует контакты для функций календаря"
+        "NSCalendarsUsageDescription": "Routiva использует календарь для синхронизации ваших задач",
+        "NSContactsUsageDescription": "Routiva использует контакты для функций календаря"
       }
     },
     "android": {

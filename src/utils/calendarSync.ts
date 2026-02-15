@@ -9,7 +9,15 @@ import { logger } from './logger';
  * Исправлено: использует существующие календари вместо создания новых
  */
 
-const TIMEWHEEL_CALENDAR_NAME = 'TimeWheel';
+const ROUTIVA_CALENDAR_NAME = 'Routiva';
+const LEGACY_TIMEWHEEL_CALENDAR_NAME = 'TimeWheel';
+const ROUTIVA_EVENT_MARKER = 'Routiva App';
+const LEGACY_TIMEWHEEL_EVENT_MARKER = 'TimeWheel App';
+
+function hasOurMarker(notes: string | undefined | null): boolean {
+  if (!notes) return false;
+  return notes.includes(ROUTIVA_EVENT_MARKER) || notes.includes(LEGACY_TIMEWHEEL_EVENT_MARKER);
+}
 
 /**
  * Проверка разрешений на доступ к календарю
@@ -37,13 +45,15 @@ export async function getOrCreateTimeWheelCalendar(): Promise<string | null> {
       return null;
     }
 
-    // Ищем существующий календарь TimeWheel
-    let timeWheelCal = calendars.find(
-      (cal) => cal.title === TIMEWHEEL_CALENDAR_NAME && !cal.isPrimaryForSource,
+    // Ищем существующий календарь Routiva, либо legacy TimeWheel (для совместимости)
+    const timeWheelCal = calendars.find(
+      (cal) =>
+        (cal.title === ROUTIVA_CALENDAR_NAME || cal.title === LEGACY_TIMEWHEEL_CALENDAR_NAME) &&
+        !cal.isPrimaryForSource,
     );
 
     if (timeWheelCal) {
-      logger.log('[CalendarSync] Found existing TimeWheel calendar:', timeWheelCal.id);
+      logger.log('[CalendarSync] Found existing app calendar:', timeWheelCal.title, timeWheelCal.id);
       return timeWheelCal.id;
     }
 
@@ -54,14 +64,14 @@ export async function getOrCreateTimeWheelCalendar(): Promise<string | null> {
 
         if (defaultSource) {
           const calendarId = await Calendar.createCalendarAsync({
-            title: TIMEWHEEL_CALENDAR_NAME,
+            title: ROUTIVA_CALENDAR_NAME,
             color: '#2196F3',
             entityType: Calendar.EntityTypes.EVENT,
             source: defaultSource,
-            name: TIMEWHEEL_CALENDAR_NAME,
+            name: ROUTIVA_CALENDAR_NAME,
           });
 
-          logger.log('[CalendarSync] Created new TimeWheel calendar:', calendarId);
+          logger.log('[CalendarSync] Created new app calendar:', calendarId);
           return calendarId;
         }
       } catch (createError) {
@@ -110,7 +120,7 @@ function taskToCalendarEvent(task: Task, date: Date) {
     startDate,
     endDate,
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    notes: `Category: ${task.category} | TimeWheel App`,
+    notes: `Category: ${task.category} | ${ROUTIVA_EVENT_MARKER}`,
     allDay: false,
   };
 }
@@ -219,10 +229,9 @@ export async function getTimeWheelEventsFromCalendar(
 
     const events = await Calendar.getEventsAsync([calendarId], startDate, endDate);
 
-    // Фильтруем только TimeWheel события (содержат наш маркер в notes)
-    return events.filter(
-      (event) => event.title && !event.allDay && event.notes?.includes('TimeWheel'),
-    );
+    // Фильтруем только события приложения (содержат наш маркер в notes).
+    // Важно: принимаем и legacy-маркер TimeWheel, чтобы не "потерять" старые события.
+    return events.filter((event) => event.title && !event.allDay && hasOurMarker(event.notes));
   } catch (error) {
     logger.error('[CalendarSync] Error getting events:', error);
     return [];
