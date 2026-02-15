@@ -253,6 +253,7 @@ export const SCREEN = {
 
 export const STORAGE_KEYS = {
   days: '@timewheel:days',
+  templates: '@timewheel:templates',
   lastSync: '@timewheel:lastSync',
 } as const;
 

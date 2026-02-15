@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
-import { Day, Task, FormData } from '../types/types';
+import { Day, Task, FormData, Template, TemplateApplyOptions, TemplateApplyPreview } from '../types/types';
 import { mockDays } from '../utils/mockData';
 import { loadDaysFromStorage, saveDaysToStorage, StorageError } from '../utils/storageUtils';
 import { initializeCalendarSync } from '../utils/calendarSync';
@@ -22,6 +22,7 @@ import {
 import { DAYS_DATA, DAYS_OF_WEEK } from '../constants/theme';
 import i18n, { getDayLabel } from '../i18n';
 import { getWeeklyTemplate, buildTasksForDate } from '../utils/templates';
+import { applyTemplate, previewTemplateApplication } from '../utils/templateApplication';
 import { logger } from '../utils/logger';
 
 export function useTaskManager() {
@@ -681,6 +682,27 @@ export function useTaskManager() {
     return appliedCount;
   }, [days, getDayName, weekStart]);
 
+  const previewTemplateApply = useCallback(
+    (template: Template, options: TemplateApplyOptions): TemplateApplyPreview => {
+      return previewTemplateApplication(days, template, options);
+    },
+    [days],
+  );
+
+  const applyTemplateWithOptions = useCallback(
+    async (template: Template, options: TemplateApplyOptions): Promise<TemplateApplyPreview> => {
+      const { days: updatedDays, preview } = applyTemplate(days, template, options, (dateIso) => {
+        const parsed = parseDateISO(dateIso);
+        return parsed ? getDayName(parsed) : dateIso;
+      });
+
+      await saveDaysToStorage(updatedDays);
+      setDays(updatedDays);
+      return preview;
+    },
+    [days, getDayName],
+  );
+
   // ============================================================================
   // ФУНКЦИЯ ОЧИСТКИ ОШИБОК
   // ============================================================================
@@ -712,6 +734,8 @@ export function useTaskManager() {
     totalHours,
     weekDays,
     applyWeeklyTemplate,
+    previewTemplateApply,
+    applyTemplateWithOptions,
     storageError,
     clearStorageError,
   };

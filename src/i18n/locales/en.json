@@ -15,6 +15,8 @@
     "addTask": "+ Add task",
     "addSchedule": "📋 Add schedule",
     "applyWeeklyTemplate": "📅 Apply weekly template",
+    "quickWeeklyTemplate": "Quick weekly template",
+    "templates": "Templates",
     "lightTheme": "☀️ Light theme",
     "darkTheme": "🌙 Dark theme"
   },

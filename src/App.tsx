@@ -15,12 +15,22 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { v4 as uuidv4 } from 'uuid';
 
 import { useTaskManager } from './hooks/useTaskManager';
-import { SPACING, FONT_SIZES, ThemeProvider, useTheme, CLOCK_RADIUS, CENTER_Y } from './constants/theme';
-import { FormData } from './types/types';
+import {
+  SPACING,
+  FONT_SIZES,
+  ThemeProvider,
+  useTheme,
+  CLOCK_RADIUS,
+  CENTER_Y,
+  DAYS_OF_WEEK,
+} from './constants/theme';
+import { FormData, Template, TemplateApplyOptions, TemplateTaskInput, TemplateType } from './types/types';
 import { ParsedTask } from './utils/scheduleParser';
 import { addDays, formatDateISO, parseDateISO } from './utils/timeUtils';
+import { loadTemplatesFromStorage, saveTemplatesToStorage } from './utils/storageUtils';
 
 import DaySelector from './components/DaySelector';
 import NavigationBar from './components/NavigationBar';
@@ -32,6 +42,7 @@ import StorageErrorBanner from './components/StorageErrorBanner';
 import StatsBar from './components/StatsBar';
 import PullToRefresh from './components/PullToRefresh';
 import ErrorBoundary from './components/ErrorBoundary';
+import TemplatesScreen from './components/TemplatesScreen';
 import { initializeCalendarSync, getOrCreateTimeWheelCalendar } from './utils/calendarSync';
 import { syncCalendarToDays } from './utils/bidirectionalSync';
 
@@ -75,6 +86,8 @@ function AppContent() {
     storageError,
     clearStorageError,
     applyWeeklyTemplate,
+    previewTemplateApply,
+    applyTemplateWithOptions,
   } = useTaskManager();
 
   // ============================================================================
@@ -84,6 +97,9 @@ function AppContent() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [addMenuVisible, setAddMenuVisible] = useState(false);
+  const [templatesVisible, setTemplatesVisible] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
 
   const [formData, setFormData] = useState<FormData>({
     title: '',
@@ -259,6 +275,12 @@ function AppContent() {
 
   const toggleMenu = useCallback(() => {
     setMenuVisible((prev) => !prev);
+    setAddMenuVisible(false);
+  }, []);
+
+  const toggleAddMenu = useCallback(() => {
+    setAddMenuVisible((prev) => !prev);
+    setMenuVisible(false);
   }, []);
 
   const handleMenuItemPress = useCallback((label: string, action?: () => void) => {
@@ -268,6 +290,174 @@ function AppContent() {
       return;
     }
     Alert.alert(label);
+  }, []);
+
+  const handleAddMenuItemPress = useCallback((action: () => void) => {
+    setAddMenuVisible(false);
+    action();
+  }, []);
+
+  const handleOpenTemplatesScreen = useCallback(() => {
+    void loadTemplatesFromStorage()
+      .then((loaded) => setTemplates(loaded))
+      .catch(() => setTemplates([]));
+    setTemplatesVisible(true);
+  }, []);
+
+  const handleCloseTemplatesScreen = useCallback(() => {
+    setTemplatesVisible(false);
+  }, []);
+
+  const toTemplateTaskInput = useCallback((task: { title: string; startTime: string; endTime: string; category: string; color: string; }): TemplateTaskInput => {
+    return {
+      title: task.title,
+      startTime: task.startTime,
+      endTime: task.endTime,
+      category: task.category,
+      color: task.color,
+    };
+  }, []);
+
+  const handleCreateTemplatePress = useCallback(
+    (type: TemplateType) => {
+      const nowIso = new Date().toISOString();
+      let newTemplate: Template | null = null;
+
+      if (type === 'day') {
+        if (currentDay.tasks.length === 0) {
+          Alert.alert('Нет задач', 'Нельзя создать шаблон дня из пустого дня.');
+          return;
+        }
+
+        newTemplate = {
+          id: `template-${uuidv4()}`,
+          type: 'day',
+          name: `День ${selectedDate}`,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          tasks: currentDay.tasks.map(toTemplateTaskInput),
+        };
+      }
+
+      if (type === 'week') {
+        const weekTasksByDay = DAYS_OF_WEEK.reduce((acc, weekdayId, index) => {
+          acc[weekdayId] = (weekDays[index]?.tasks || []).map(toTemplateTaskInput);
+          return acc;
+        }, {} as Record<typeof DAYS_OF_WEEK[number], TemplateTaskInput[]>);
+
+        const totalWeekTasks = Object.values(weekTasksByDay).reduce((sum, tasksForDay) => sum + tasksForDay.length, 0);
+        if (totalWeekTasks === 0) {
+          Alert.alert('Нет задач', 'Нельзя создать шаблон недели из пустой недели.');
+          return;
+        }
+
+        newTemplate = {
+          id: `template-${uuidv4()}`,
+          type: 'week',
+          name: `Неделя от ${weekDays[0]?.date || selectedDate}`,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          days: weekTasksByDay,
+        };
+      }
+
+      if (type === 'month') {
+        const year = selectedDateObj.getFullYear();
+        const month = selectedDateObj.getMonth();
+        const monthDaysWithTasks = days.filter((day) => {
+          const parsed = parseDateISO(day.date);
+          if (!parsed) return false;
+          return parsed.getFullYear() === year && parsed.getMonth() === month && day.tasks.length > 0;
+        });
+
+        if (monthDaysWithTasks.length === 0) {
+          Alert.alert('Нет задач', 'Нельзя создать шаблон месяца из пустого месяца.');
+          return;
+        }
+
+        const monthTemplateMap: Record<string, TemplateTaskInput[]> = {};
+        monthDaysWithTasks.forEach((day) => {
+          monthTemplateMap[day.date] = day.tasks.map(toTemplateTaskInput);
+        });
+
+        newTemplate = {
+          id: `template-${uuidv4()}`,
+          type: 'month',
+          name: `Месяц ${selectedDate.slice(0, 7)}`,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          days: monthTemplateMap,
+        };
+      }
+
+      if (!newTemplate) {
+        return;
+      }
+
+      const nextTemplates = [newTemplate, ...templates];
+      setTemplates(nextTemplates);
+      void saveTemplatesToStorage(nextTemplates).catch(() => {
+        Alert.alert('Ошибка', 'Не удалось сохранить шаблон.');
+      });
+      Alert.alert('Готово', `Шаблон "${newTemplate.name}" создан.`);
+    },
+    [currentDay.tasks, selectedDate, selectedDateObj, weekDays, days, toTemplateTaskInput, templates],
+  );
+
+  const handleRenameTemplatePress = useCallback(
+    (nextTemplate: Template) => {
+      const nextTemplates = templates.map((template) =>
+        template.id === nextTemplate.id
+          ? {
+              ...nextTemplate,
+              updatedAt: new Date().toISOString(),
+            }
+          : template,
+      );
+      setTemplates(nextTemplates);
+      void saveTemplatesToStorage(nextTemplates).catch(() => {
+        Alert.alert('Ошибка', 'Не удалось сохранить изменения шаблона.');
+      });
+    },
+    [templates],
+  );
+
+  const handleDeleteTemplatePress = useCallback(
+    (templateId: string) => {
+      const nextTemplates = templates.filter((template) => template.id !== templateId);
+      setTemplates(nextTemplates);
+      void saveTemplatesToStorage(nextTemplates).catch(() => {
+        Alert.alert('Ошибка', 'Не удалось удалить шаблон.');
+      });
+    },
+    [templates],
+  );
+
+  const handlePreviewTemplatePress = useCallback(
+    (template: Template, options: TemplateApplyOptions) => {
+      return previewTemplateApply(template, options);
+    },
+    [previewTemplateApply],
+  );
+
+  const handleApplyTemplatePress = useCallback(
+    async (template: Template, options: TemplateApplyOptions) => {
+      return applyTemplateWithOptions(template, options);
+    },
+    [applyTemplateWithOptions],
+  );
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const loaded = await loadTemplatesFromStorage();
+        setTemplates(loaded);
+      } catch (error) {
+        setTemplates([]);
+      }
+    };
+
+    void loadTemplates();
   }, []);
 
   // ============================================================================
@@ -321,7 +511,7 @@ function AppContent() {
   const canGoPrev = useMemo(() => true, []);
   const canGoNext = useMemo(() => true, []);
 
-  const headerHeight = 32;
+  const headerHeight = 52;
 
   // ============================================================================
   // FlatList DATA — ОДИН ЭЛЕМЕНТ ДЛЯ СОДЕРЖИМОГО
@@ -336,14 +526,22 @@ function AppContent() {
             {/* ШАПКА */}
             <View style={[styles.header, { height: headerHeight + insets.top, paddingTop: insets.top }]}>
               <View style={styles.headerContent}>
-                <View style={styles.headerSpacer} />
-                <Text style={styles.headerTitle}>TimeWheel</Text>
-                <TouchableOpacity style={styles.headerButton} onPress={toggleMenu} activeOpacity={0.7}>
+                <TouchableOpacity
+                  style={[styles.headerIconButton, menuVisible && styles.headerIconButtonActive]}
+                  onPress={toggleMenu}
+                  activeOpacity={0.8}>
                   <View style={styles.burgerIcon}>
                     <View style={styles.burgerLine} />
                     <View style={styles.burgerLine} />
                     <View style={styles.burgerLine} />
                   </View>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>TimeWheel</Text>
+                <TouchableOpacity
+                  style={[styles.headerIconButton, addMenuVisible && styles.headerIconButtonActive]}
+                  onPress={toggleAddMenu}
+                  activeOpacity={0.8}>
+                  <Text style={styles.addMenuIcon}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -356,22 +554,82 @@ function AppContent() {
                 <View
                   style={[
                     styles.menuContainer,
-                    { top: headerHeight + insets.top, left: 0, right: 0 },
+                    styles.menuContainerLeft,
+                    { top: headerHeight + insets.top },
                   ]}>
                   {[
-                    { label: 'Светлая тема', action: () => setMode('light') },
-                    { label: 'Темная тема', action: () => setMode('dark') },
-                    { label: 'Напоминания' },
-                    { label: 'О приложении' },
+                    { icon: '☀', label: 'Светлая тема', action: () => setMode('light') },
+                    { icon: '🌙', label: 'Темная тема', action: () => setMode('dark') },
+                    { icon: '🔔', label: 'Напоминания' },
+                    { icon: 'ℹ', label: 'О приложении' },
                   ].map((item) => (
                     <TouchableOpacity
                       key={item.label}
                       style={styles.menuItem}
                       onPress={() => handleMenuItemPress(item.label, item.action)}
                       activeOpacity={0.7}>
-                      <Text style={styles.menuItemText}>{item.label}</Text>
+                      <View style={styles.menuItemRow}>
+                        <Text style={styles.menuItemIcon}>{item.icon}</Text>
+                        <Text style={styles.menuItemText}>{item.label}</Text>
+                        <Text style={styles.menuItemChevron}>›</Text>
+                      </View>
                     </TouchableOpacity>
                   ))}
+                </View>
+              </>
+            )}
+
+            {addMenuVisible && (
+              <>
+                <TouchableWithoutFeedback onPress={() => setAddMenuVisible(false)}>
+                  <View style={styles.menuOverlay} />
+                </TouchableWithoutFeedback>
+                <View
+                  style={[
+                    styles.menuContainer,
+                    styles.menuContainerRight,
+                    { top: headerHeight + insets.top },
+                  ]}>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => handleAddMenuItemPress(handleOpenAddModal)}
+                    activeOpacity={0.7}>
+                    <View style={styles.menuItemRow}>
+                      <Text style={styles.menuItemIcon}>✍</Text>
+                      <Text style={styles.menuItemText}>{t('ui.addTask').replace(/^\+\s*/, '')}</Text>
+                      <Text style={styles.menuItemChevron}>›</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => handleAddMenuItemPress(() => setParserModalVisible(true))}
+                    activeOpacity={0.7}>
+                    <View style={styles.menuItemRow}>
+                      <Text style={styles.menuItemIcon}>📋</Text>
+                      <Text style={styles.menuItemText}>{t('ui.addSchedule').replace(/^📋\s*/, '')}</Text>
+                      <Text style={styles.menuItemChevron}>›</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => handleAddMenuItemPress(handleApplyWeeklyTemplate)}
+                    activeOpacity={0.7}>
+                    <View style={styles.menuItemRow}>
+                      <Text style={styles.menuItemIcon}>📅</Text>
+                      <Text style={styles.menuItemText}>{t('ui.quickWeeklyTemplate')}</Text>
+                      <Text style={styles.menuItemChevron}>›</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => handleAddMenuItemPress(handleOpenTemplatesScreen)}
+                    activeOpacity={0.7}>
+                    <View style={styles.menuItemRow}>
+                      <Text style={styles.menuItemIcon}>🗂</Text>
+                      <Text style={styles.menuItemText}>{`${t('ui.templates')} (${templates.length})`}</Text>
+                      <Text style={styles.menuItemChevron}>›</Text>
+                    </View>
+                  </TouchableOpacity>
                 </View>
               </>
             )}
@@ -442,29 +700,6 @@ function AppContent() {
                 onDeleteTask={handleDeleteTask}
               />
 
-              {/* КНОПКА ПАРСЕРА РАСПИСАНИЯ */}
-              <TouchableOpacity
-                style={styles.parserButton}
-                onPress={() => setParserModalVisible(true)}
-                activeOpacity={0.7}>
-                <Text style={styles.parserButtonText}>{t('ui.addSchedule')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.templateButton}
-                onPress={handleApplyWeeklyTemplate}
-                activeOpacity={0.7}>
-                <Text style={styles.templateButtonText}>{t('ui.applyWeeklyTemplate')}</Text>
-              </TouchableOpacity>
-
-              {/* КНОПКА ДОБАВЛЕНИЯ ЗАДАЧИ */}
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={handleOpenAddModal}
-                activeOpacity={0.7}>
-                <Text style={styles.addButtonText}>{t('ui.addTask')}</Text>
-              </TouchableOpacity>
-
               {/* СТАТИСТИКА */}
               <StatsBar loadPercent={loadPercent} nextTask={nextTask} isCurrentDay={isCurrentDay} />
             </View>
@@ -490,6 +725,9 @@ function AppContent() {
       loadPercent,
       nextTask,
       handleApplyWeeklyTemplate,
+      handleOpenAddModal,
+      handleOpenTemplatesScreen,
+      handleAddMenuItemPress,
       handleGoToToday,
       canGoPrev,
       canGoNext,
@@ -497,12 +735,33 @@ function AppContent() {
       handleNextDay,
       setMode,
       t,
+      templates.length,
+      menuVisible,
+      addMenuVisible,
+      toggleMenu,
+      toggleAddMenu,
+      insets,
     ],
   );
 
   // ============================================================================
   // РЕНДЕР
   // ============================================================================
+
+  if (templatesVisible) {
+    return (
+      <TemplatesScreen
+        templates={templates}
+        selectedDate={selectedDate}
+        onBack={handleCloseTemplatesScreen}
+        onCreateTemplate={handleCreateTemplatePress}
+        onSaveTemplate={handleRenameTemplatePress}
+        onDeleteTemplate={handleDeleteTemplatePress}
+        onPreviewTemplate={handlePreviewTemplatePress}
+        onApplyTemplate={handleApplyTemplatePress}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
@@ -567,75 +826,6 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     flex: 1,
     backgroundColor: colors.background,
   },
-  parserButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    marginVertical: SPACING.md,
-    marginHorizontal: SPACING.md,
-    width: '90%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    alignSelf: 'center',
-  },
-  parserButtonText: {
-    color: colors.cardBackground,
-    fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  templateButton: {
-    backgroundColor: colors.info,
-    borderRadius: 12,
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    marginVertical: SPACING.md,
-    marginHorizontal: SPACING.md,
-    width: '90%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    alignSelf: 'center',
-  },
-  templateButtonText: {
-    color: colors.cardBackground,
-    fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  addButton: {
-    backgroundColor: colors.success,
-    borderRadius: 12,
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    marginVertical: SPACING.lg,
-    marginHorizontal: SPACING.md,
-    width: '90%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    alignSelf: 'center',
-  },
-  addButtonText: {
-    color: colors.cardBackground,
-    fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
   todayButtonRow: {
     position: 'absolute',
     right: SPACING.lg,
@@ -658,12 +848,19 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     borderColor: colors.border,
   },
   header: {
-    height: 32,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: 'rgba(255, 255, 255, 0.24)',
     backgroundColor: colors.primary,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 5,
   },
   headerContent: {
     flex: 1,
@@ -672,26 +869,38 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
     width: '100%',
-    marginTop: -4,
-  },
-  headerSpacer: {
-    width: 84,
+    paddingBottom: SPACING.xs,
   },
   headerTitle: {
     flex: 1,
-    fontSize: FONT_SIZES.xl,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '700',
     color: colors.cardBackground,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
-  headerButton: {
-    width: 84,
-    alignItems: 'flex-end',
+  headerIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  headerIconButtonActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.24)',
+  },
+  addMenuIcon: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.cardBackground,
+    lineHeight: 26,
   },
   burgerIcon: {
-    width: 22,
-    height: 16,
+    width: 18,
+    height: 13,
     justifyContent: 'space-between',
   },
   burgerLine: {
@@ -701,12 +910,27 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   },
   menuContainer: {
     position: 'absolute',
-    width: '100%',
-    backgroundColor: colors.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    paddingVertical: SPACING.xs,
+    backgroundColor: colors.cardBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: SPACING.sm,
     zIndex: 20,
+    minWidth: 292,
+    maxWidth: '94%',
+    marginTop: SPACING.xs,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  menuContainerLeft: {
+    left: SPACING.sm,
+    borderRadius: 14,
+  },
+  menuContainerRight: {
+    right: SPACING.sm,
+    borderRadius: 14,
   },
   menuOverlay: {
     position: 'absolute',
@@ -715,15 +939,35 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
     right: 0,
     bottom: 0,
     zIndex: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
   },
   menuItem: {
+    marginHorizontal: SPACING.sm,
+    borderRadius: 10,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
   },
+  menuItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  menuItemIcon: {
+    width: 20,
+    fontSize: FONT_SIZES.base,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
   menuItemText: {
-    fontSize: FONT_SIZES.sm,
-    color: colors.cardBackground,
+    flex: 1,
+    fontSize: FONT_SIZES.base,
+    color: colors.textPrimary,
     fontWeight: '600',
+  },
+  menuItemChevron: {
+    fontSize: FONT_SIZES.base,
+    color: colors.textTertiary,
+    fontWeight: '700',
   },
   bottomSection: {
     marginTop: -SPACING.sm + 20,

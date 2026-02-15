@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import CryptoJS from 'crypto-js';
-import { Day } from '../types/types';
+import { Day, Template } from '../types/types';
 import { STORAGE_KEYS } from '../constants/theme';
 import i18n from '../i18n';
 import { logger } from './logger';
@@ -73,6 +73,33 @@ export async function loadDaysFromStorage(): Promise<Day[]> {
 }
 
 /**
+ * Загружает шаблоны из AsyncStorage
+ * @throws StorageError если загрузка не удалась
+ */
+export async function loadTemplatesFromStorage(): Promise<Template[]> {
+  try {
+    const stored = await AsyncStorage.getItem(STORAGE_KEYS.templates);
+    if (stored) {
+      try {
+        const payload = stored.startsWith(ENCRYPTED_PREFIX)
+          ? await decryptPayload(stored.slice(ENCRYPTED_PREFIX.length))
+          : stored;
+        const parsed = JSON.parse(payload);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (parseError) {
+        logger.warn('Templates parse error:', parseError);
+        await AsyncStorage.removeItem(STORAGE_KEYS.templates);
+        return [];
+      }
+    }
+    return [];
+  } catch (error) {
+    logger.error('Templates load error:', error);
+    throw new StorageError(i18n.t('errors.storageLoad'));
+  }
+}
+
+/**
  * Сохраняет дни с расписанием в AsyncStorage
  * @throws StorageError если сохранение не удалось
  */
@@ -94,12 +121,29 @@ export async function saveDaysToStorage(days: Day[]): Promise<void> {
   return queuedSave;
 }
 
+export async function saveTemplatesToStorage(templates: Template[]): Promise<void> {
+  const payload = JSON.stringify(templates);
+  const queuedSave = saveQueue.then(async () => {
+    try {
+      const encryptedPayload = await encryptPayload(payload);
+      await AsyncStorage.setItem(STORAGE_KEYS.templates, encryptedPayload);
+    } catch (error) {
+      logger.error('Templates save error:', error);
+      throw new StorageError(i18n.t('errors.storageSave'));
+    }
+  });
+
+  saveQueue = queuedSave.catch(() => {});
+  return queuedSave;
+}
+
 /**
  * Удаляет все данные из хранилища (опасная операция)
  */
 export async function clearStorage(): Promise<void> {
   try {
     await AsyncStorage.removeItem(STORAGE_KEYS.days);
+    await AsyncStorage.removeItem(STORAGE_KEYS.templates);
     await SecureStore.deleteItemAsync(ENCRYPTION_KEY_STORAGE);
   } catch (error) {
     logger.error('Storage clear error:', error);
